@@ -44,6 +44,7 @@ SYSTEM_APPS = [
 CUSTOM_APPS = [
     "core.apps.CoreConfig",
     "users.apps.UsersConfig",
+    "posts.apps.PostsConfig",
 ]
 
 

@@ -163,4 +163,4 @@ cython_debug/
 !*/migrations/__init__.py
 
 .DS_Store
-media
+media/post_images/*
