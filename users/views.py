@@ -1,14 +1,77 @@
 from rest_framework import status
 from rest_framework.generics import get_object_or_404
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from users.models import User
 from posts.models import Post
 from users.serializers import (
+    ChangePasswordSerializer,
+    UserCreateSerializer,
     UserFollowersListSerializer,
     UserFollowingsListSerializer,
+    UserUpdateSerializer,
 )
 from posts.serializers import PostSerializer
+
+
+class UserView(APIView):
+    """회원 가입, 정보 수정, 탈퇴"""
+
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+    def post(self, request):
+        serializer = UserCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request):
+        serializer = UserUpdateSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request):
+        """
+        - 계정 임시 비활성화 상태로만 변경하려면 -
+        user.is_active = False
+        user.save()
+        """
+        user = request.user
+        user.delete()
+        return Response(
+            {"detail": "User successfully deactivated."},
+            status=status.HTTP_204_NO_CONTENT,
+        )
+
+
+class ChangePasswordView(APIView):
+    """ "비밀번호 변경"""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            user = request.user
+            if user.check_password(serializer.data.get("old_password")):
+                user.set_password(serializer.data.get("new_password"))
+                user.save()
+                return Response(
+                    {"message": "비밀번호가 성공적으로 변경되었습니다."},
+                    status=status.HTTP_200_OK,
+                )
+            return Response(
+                {"error": "현재 비밀번호가 올바르지 않습니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UsersFollowingsList(APIView):

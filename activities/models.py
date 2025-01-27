@@ -31,6 +31,6 @@ class Activity(models.Model):
         if self.activity_type == "like":
             return f"{self.actor.username}님이 게시물에 좋아요를 눌렀습니다."
         elif self.activity_type == "follow":
-            return f"{self.actor.username}님이 {self.target_user.username}님을 팔로우했습니다."
+            return f"{self.actor.username}님이 {self.recipient.username}님을 팔로우했습니다."
         else:
             return "알 수 없는 활동"
