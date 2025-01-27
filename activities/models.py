@@ -1,33 +1,31 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-from core.models import CommonModel
 
 User = get_user_model()
 
 
-class Activity(CommonModel):
+class Activity(models.Model):
     ACTIVITY_TYPES = (
         ("like", "좋아요"),
         ("follow", "팔로우"),
     )
-
-    actor = models.ForeignKey(User, on_delete=models.CASCADE, related_name="activities")
-    target_user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name="targeted_activities",
-        null=True,
-        blank=True,
+    recipient = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="received_activities"
     )
-    post = models.ForeignKey(
-        "posts.Post",
-        on_delete=models.CASCADE,
-        related_name="activities",
-        null=True,
-        blank=True,
+    actor = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="performed_activities"
     )
     activity_type = models.CharField(max_length=10, choices=ACTIVITY_TYPES)
+    post = models.ForeignKey(
+        "posts.Post", on_delete=models.CASCADE, null=True, blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["recipient", "-created_at"]),
+        ]
 
     def __str__(self):
         if self.activity_type == "like":

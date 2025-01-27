@@ -7,7 +7,7 @@ from activities.models import Activity
 class ActivityAdmin(admin.ModelAdmin):
     list_filter = (
         "actor",
-        "target_user",
+        "recipient",
         "post",
         "activity_type",
         "is_read",

@@ -11,7 +11,7 @@ def create_like_activity(sender, instance, action, pk_set, **kwargs):
         for user_pk in pk_set:
             Activity.objects.create(
                 actor=User.objects.get(pk=user_pk),
-                target_user=instance.author,
+                recipient=instance.author,
                 post=instance,
                 activity_type="like",
             )
@@ -23,6 +23,6 @@ def create_follow_activity(sender, instance, action, pk_set, **kwargs):
         for user_pk in pk_set:
             Activity.objects.create(
                 actor=instance,
-                target_user=User.objects.get(pk=user_pk),
+                recipient=User.objects.get(pk=user_pk),
                 activity_type="follow",
             )
