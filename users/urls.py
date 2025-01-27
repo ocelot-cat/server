@@ -12,4 +12,9 @@ urlpatterns = [
         views.UsersFollowersList.as_view(),
         name="followers-list",
     ),
+    path(
+        "<str:username>/posts",
+        views.PostsOwnList.as_view(),
+        name="own-posts-list",
+    ),
 ]

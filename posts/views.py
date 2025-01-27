@@ -1,20 +1,26 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import status
+from rest_framework.generics import RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
 from posts.models import Post
 from posts.serializers import PostSerializer
-from users.models import User
+from users.serializers import UserSerializer
 
 
-class PostsOwnList(APIView):
-    """사용자가 소유한 포스트 리스트"""
+class PostDetailView(RetrieveAPIView):
+    """포스트 디테일"""
 
-    def get(self, request, username):
-        user = get_object_or_404(User, username=username)
-        posts = Post.objects.filter(author=user).prefetch_related(
-            "tags", "likes", "images"
-        )
-        serializer = PostSerializer(posts, many=True)
+    queryset = Post.objects.all()
+    serializer_class = PostSerializer
+    lookup_field = "pk"
+
+
+class PostLikesList(APIView):
+    """포스트 디테일에 좋아요를 누른 자세한 사용자 목록"""
+
+    def get(self, request, post_id):
+        post = get_object_or_404(Post, id=post_id)
+        likes = post.likes.all()
+        serializer = UserSerializer(likes, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

@@ -2,9 +2,10 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path("<int:pk>/", views.PostDetailView.as_view(), name="post-detail"),
     path(
-        "<str:username>",
-        views.PostsOwnList.as_view(),
-        name="own-posts-list",
+        "<int:post_id>/likes/",
+        views.PostLikesList.as_view(),
+        name="post-likes-list",
     ),
 ]

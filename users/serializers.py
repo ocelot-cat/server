@@ -26,3 +26,9 @@ class UserFollowersListSerializer(ModelSerializer):
     class Meta:
         model = User
         fields = ("followers",)
+
+
+class UserSerializer(ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("id", "username")

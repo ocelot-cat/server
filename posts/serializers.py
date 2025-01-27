@@ -27,8 +27,6 @@ class PostSerializer(serializers.ModelSerializer):
             "tags",
             "images",
             "likes_count",
-            "created_at",
-            "updated_at",
         )
 
     def get_likes_count(self, obj):
