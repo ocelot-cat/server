@@ -3,6 +3,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from posts.serializers import PostRetrieveSerializer
 from users.models import User
 from posts.models import Post
 from users.serializers import (
@@ -12,7 +13,6 @@ from users.serializers import (
     UserFollowingsListSerializer,
     UserUpdateSerializer,
 )
-from posts.serializers import PostSerializer
 
 
 class UserView(APIView):
@@ -106,5 +106,5 @@ class PostsOwnList(APIView):
         posts = Post.objects.filter(author=user).prefetch_related(
             "tags", "likes", "images"
         )
-        serializer = PostSerializer(posts, many=True)
+        serializer = PostRetrieveSerializer(posts, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
