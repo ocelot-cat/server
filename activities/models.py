@@ -28,9 +28,10 @@ class Activity(models.Model):
         ]
 
     def __str__(self):
+        actor_name = self.actor.username if self.actor.is_public else "익명의 사용자"
         if self.activity_type == "like":
-            return f"{self.actor.username}님이 게시물에 좋아요를 눌렀습니다."
+            return f"{actor_name}님이 게시물에 좋아요를 눌렀습니다."
         elif self.activity_type == "follow":
-            return f"{self.actor.username}님이 {self.recipient.username}님을 팔로우했습니다."
+            return f"{actor_name}님이 {self.recipient.username}님을 팔로우했습니다."
         else:
             return "알 수 없는 활동"

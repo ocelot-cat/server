@@ -14,6 +14,7 @@ class UserActivityListView(APIView):
         page_number = request.GET.get("page", 1)
         activities = (
             Activity.objects.filter(recipient=request.user)
+            .exclude(actor=request.user)
             .select_related("actor", "post")
             .order_by("-created_at")
         )
