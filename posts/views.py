@@ -1,10 +1,12 @@
 from django.db.models import F, Sum
 from django.shortcuts import get_object_or_404
 from rest_framework import status
+from rest_framework.generics import GenericAPIView
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from posts.models import Post, PostImage
+from posts.models import Post, PostImage, Tag
 from posts.serializers import (
     PostCreateSerializer,
     PostRetrieveSerializer,
@@ -32,6 +34,8 @@ class PostCreateView(APIView):
 
 
 class PostsRecommendedView(APIView):
+    """추천 포스트 목록"""
+
     def get(self, request):
         user = request.user
         user_interests = UserInterest.objects.filter(user=user).values("tag")
@@ -44,10 +48,38 @@ class PostsRecommendedView(APIView):
                     filter=F("tags__userinterest__user") == user,
                 )
             )
-            .order_by("-relevance", "-created_at")[:10]
-        )  # 상위 10개 게시물만 추천
+            .order_by("-relevance", "-created_at")[:10]  # 상위 10개 게시물만 추천
+        )
 
         serializer = PostRetrieveSerializer(recommended_posts, many=True)
+        return Response(serializer.data)
+
+
+class TaggedPostsPagination(PageNumberPagination):
+    page_size = 10  # 한 페이지에 표시할 게시물 수
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
+class PostsTaggedView(GenericAPIView):
+    """태그별 포스트 목록"""
+
+    serializer_class = PostRetrieveSerializer
+    pagination_class = TaggedPostsPagination
+
+    def get_queryset(self):
+        tag_name = self.kwargs.get("tag_name")
+        tag = get_object_or_404(Tag, name=tag_name)
+        return Post.objects.filter(tags=tag).order_by("-created_at")
+
+    def get(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
 

@@ -36,10 +36,10 @@ class PostCreateSerializer(serializers.ModelSerializer):
 
 
 class PostRetrieveSerializer(serializers.ModelSerializer):
+    author = serializers.SerializerMethodField()
     tags = TagSerializer(many=True, read_only=True)
     images = PostImageSerializer(many=True, read_only=True)
     likes_count = serializers.SerializerMethodField()
-    author = serializers.ReadOnlyField(source="author.username")
 
     class Meta:
         model = Post
@@ -49,7 +49,13 @@ class PostRetrieveSerializer(serializers.ModelSerializer):
             "tags",
             "images",
             "likes_count",
+            "created_at",
         )
+
+    def get_author(self, obj):
+        if obj.author.is_public:
+            return obj.author.username
+        return None
 
     def get_likes_count(self, obj):
         return obj.likes.count()
