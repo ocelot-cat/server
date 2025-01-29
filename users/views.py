@@ -105,20 +105,21 @@ class UserFollowView(APIView):
 
         if user == user_to_follow:
             return Response(
-                {"detail": "자기 자신은 최고의 친구입니다."},
+                {"detail": "자기 자신을 팔로우할 수 없습니다."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         if user_to_follow in user.followings.all():
             user.followings.remove(user_to_follow)
-            return Response(
-                {"detail": "언팔로우되었습니다."}, status=status.HTTP_200_OK
-            )
+            action = "언팔로우"
         else:
             user.followings.add(user_to_follow)
-            return Response(
-                {"detail": "팔로우되었습니다."}, status=status.HTTP_201_CREATED
-            )
+            action = "팔로우"
+
+        return Response(
+            {"detail": f"{action}되었습니다.", "is_public": user_to_follow.is_public},
+            status=status.HTTP_200_OK,
+        )
 
 
 class PostsOwnList(APIView):

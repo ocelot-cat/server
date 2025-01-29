@@ -1,3 +1,4 @@
+from django.db.models import F, Sum
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
@@ -8,6 +9,7 @@ from posts.serializers import (
     PostCreateSerializer,
     PostRetrieveSerializer,
 )
+from users.models import UserInterest
 from users.serializers import UserSerializer
 
 
@@ -27,6 +29,26 @@ class PostCreateView(APIView):
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PostsRecommendedView(APIView):
+    def get(self, request):
+        user = request.user
+        user_interests = UserInterest.objects.filter(user=user).values("tag")
+
+        recommended_posts = (
+            Post.objects.filter(tags__in=user_interests)
+            .annotate(
+                relevance=Sum(
+                    "tags__userinterest__score",
+                    filter=F("tags__userinterest__user") == user,
+                )
+            )
+            .order_by("-relevance", "-created_at")[:10]
+        )  # 상위 10개 게시물만 추천
+
+        serializer = PostRetrieveSerializer(recommended_posts, many=True)
+        return Response(serializer.data)
 
 
 class PostDetailView(APIView):
@@ -62,14 +84,25 @@ class PostLikeView(APIView):
 
         if user in post.likes.all():
             post.likes.remove(user)
-            return Response(
-                {"detail": "좋아요가 취소되었습니다."}, status=status.HTTP_200_OK
-            )
+            action = "취소"
+            self.update_user_interest(user, post, -1)
         else:
             post.likes.add(user)
-            return Response(
-                {"detail": "게시물에 좋아요를 눌렀습니다."},
-                status=status.HTTP_201_CREATED,
+            action = "추가"
+            self.update_user_interest(user, post, 1)
+
+        return Response(
+            {
+                "detail": f"좋아요가 {action}되었습니다.",
+                "is_public": post.author.is_public,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def update_user_interest(self, user, post, score_change):
+        for tag in post.tags.all():
+            UserInterest.objects.update_or_create(
+                user=user, tag=tag, defaults={"score": F("score") + score_change}
             )
 
 
