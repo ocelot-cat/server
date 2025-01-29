@@ -96,6 +96,31 @@ class UsersFollowersList(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class UserFollowView(APIView):
+    """팔로우, 언팔로우"""
+
+    def post(self, request, username):
+        user_to_follow = get_object_or_404(User, username=username)
+        user = request.user
+
+        if user == user_to_follow:
+            return Response(
+                {"detail": "자기 자신은 최고의 친구입니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if user_to_follow in user.followings.all():
+            user.followings.remove(user_to_follow)
+            return Response(
+                {"detail": "언팔로우되었습니다."}, status=status.HTTP_200_OK
+            )
+        else:
+            user.followings.add(user_to_follow)
+            return Response(
+                {"detail": "팔로우되었습니다."}, status=status.HTTP_201_CREATED
+            )
+
+
 class PostsOwnList(APIView):
     """사용자가 소유한 포스트 리스트"""
 

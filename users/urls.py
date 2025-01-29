@@ -19,6 +19,11 @@ urlpatterns = [
         name="followers-list",
     ),  # 팔로워 리스트
     path(
+        "<str:username>/follow/",
+        views.UserFollowView.as_view(),
+        name="follow-user",
+    ),  # 팔로우,언팔로우
+    path(
         "<str:username>/posts",
         views.PostsOwnList.as_view(),
         name="own-posts-list",

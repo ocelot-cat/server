@@ -53,6 +53,26 @@ class PostDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class PostLikeView(APIView):
+    """포스트에 like,unlike 기능"""
+
+    def post(self, request, post_id):
+        post = get_object_or_404(Post, id=post_id)
+        user = request.user
+
+        if user in post.likes.all():
+            post.likes.remove(user)
+            return Response(
+                {"detail": "좋아요가 취소되었습니다."}, status=status.HTTP_200_OK
+            )
+        else:
+            post.likes.add(user)
+            return Response(
+                {"detail": "게시물에 좋아요를 눌렀습니다."},
+                status=status.HTTP_201_CREATED,
+            )
+
+
 class PostLikesList(APIView):
     """포스트 디테일에 좋아요를 누른 자세한 사용자 목록"""
 
