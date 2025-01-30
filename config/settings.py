@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 
+from drf_yasg import openapi
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -115,6 +117,18 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+
+# SWAGGER SETTINGS
+SWAGGER_SETTINGS = {
+    "DEFAULT_INFO": openapi.Info(
+        title="ocelot-cat API",
+        default_version="v1",
+        description="ocelot-cat API",
+        terms_of_service="https://github.com/ocelot-cat/",
+        contact=openapi.Contact(email="devscarycat@icloud.com"),
+        license=openapi.License(name="MIT License"),
+    ),
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
