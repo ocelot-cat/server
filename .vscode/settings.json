@@ -1,0 +1,22 @@
+{
+  "flake8.args": ["--max-line-length=115", "--ignore=F401", "--ignore=F811"],
+  "pylint.args": [
+    "--reports",
+    "12",
+    "--disable=C0114",
+    "--disable=C0115",
+    "--disable=C0116",
+    "--disable=C0111",
+    "--disable=W0401"
+  ],
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.diagnosticMode": "workspace",
+  "python.analysis.indexing": true,
+  "python.analysis.packageIndexDepths": [
+    {
+      "depth": 100,
+      "includeAllSymbols": true,
+      "name": ""
+    }
+  ]
+}
