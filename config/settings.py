@@ -46,6 +46,7 @@ CUSTOM_APPS = [
     "users.apps.UsersConfig",
     "posts.apps.PostsConfig",
     "activities.apps.ActivitiesConfig",
+    "search.apps.SearchConfig",
 ]
 
 
