@@ -2,7 +2,7 @@
 name = "server"
 version = "0.1.0"
 description = ""
-authors = [{name = "devscarycat", email = "devscarycat@icloud.com"}]
+authors = ["devscarycat <devscarycat@icloud.com>"]
 license = "MIT"
 readme = "README.md"
 
