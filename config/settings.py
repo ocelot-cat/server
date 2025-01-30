@@ -119,6 +119,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 # SWAGGER SETTINGS
+
 SWAGGER_SETTINGS = {
     "DEFAULT_INFO": openapi.Info(
         title="ocelot-cat API",
