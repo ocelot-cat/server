@@ -3,10 +3,13 @@ from . import views
 
 urlpatterns = [
     path(
-        "", views.UserView.as_view(), name="user_operations"
+        "", views.UserView.as_view(), name="user-operations"
     ),  # 회원정보 수정,삭제,탈퇴
     path(
-        "change-password/", views.ChangePasswordView.as_view(), name="change_password"
+        "me/", views.UserMeView.as_view(), name="user-me"
+    ),  # 현재 로그인한 사용자 정보
+    path(
+        "change-password/", views.ChangePasswordView.as_view(), name="change-password"
     ),  # 비밀번호 변경
     path(
         "<str:username>/followings",

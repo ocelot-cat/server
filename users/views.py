@@ -11,6 +11,7 @@ from users.serializers import (
     UserCreateSerializer,
     UserFollowersListSerializer,
     UserFollowingsListSerializer,
+    UserMeSerializer,
     UserUpdateSerializer,
 )
 
@@ -51,27 +52,30 @@ class UserView(APIView):
         )
 
 
-class ChangePasswordView(APIView):
-    """ "비밀번호 변경"""
+class UserMeView(APIView):
+    """내 정보"""
 
     permission_classes = [IsAuthenticated]
 
-    def post(self, request):
-        serializer = ChangePasswordSerializer(data=request.data)
-        if serializer.is_valid():
-            user = request.user
-            if user.check_password(serializer.data.get("old_password")):
-                user.set_password(serializer.data.get("new_password"))
-                user.save()
-                return Response(
-                    {"message": "비밀번호가 성공적으로 변경되었습니다."},
-                    status=status.HTTP_200_OK,
-                )
-            return Response(
-                {"error": "현재 비밀번호가 올바르지 않습니다."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def get(self, request):
+        serializer = UserMeSerializer(
+            request.user, context={"request": request}
+        )  # context 추가
+        return Response(serializer.data)
+
+
+class PostsOwnList(APIView):
+    """사용자가 소유한 포스트 리스트"""
+
+    # 추후 파지네이션 포스트가 늘어날걸 대비해서 파지네이션 진행해야함
+
+    def get(self, request, username):
+        user = get_object_or_404(User, username=username)
+        posts = Post.objects.filter(author=user).prefetch_related(
+            "tags", "likes", "images"
+        )
+        serializer = PostRetrieveSerializer(posts, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class UsersFollowingsList(APIView):
@@ -122,15 +126,24 @@ class UserFollowView(APIView):
         )
 
 
-class PostsOwnList(APIView):
-    """사용자가 소유한 포스트 리스트"""
+class ChangePasswordView(APIView):
+    """ "비밀번호 변경"""
 
-    # 추후 파지네이션 포스트가 늘어날걸 대비해서 파지네이션 진행해야함
+    permission_classes = [IsAuthenticated]
 
-    def get(self, request, username):
-        user = get_object_or_404(User, username=username)
-        posts = Post.objects.filter(author=user).prefetch_related(
-            "tags", "likes", "images"
-        )
-        serializer = PostRetrieveSerializer(posts, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            user = request.user
+            if user.check_password(serializer.data.get("old_password")):
+                user.set_password(serializer.data.get("new_password"))
+                user.save()
+                return Response(
+                    {"message": "비밀번호가 성공적으로 변경되었습니다."},
+                    status=status.HTTP_200_OK,
+                )
+            return Response(
+                {"error": "현재 비밀번호가 올바르지 않습니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
