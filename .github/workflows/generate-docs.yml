@@ -17,7 +17,10 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: "3.13"
+          python-version: "3.11" # Django 5.1과 호환되는 버전으로 다운그레이드
+
+      - name: Install system dependencies
+        run: sudo apt-get install -y python3-dev
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
@@ -28,12 +31,16 @@ jobs:
 
       - name: Install dependencies
         run: |
-          poetry install
+          poetry install --no-root
+          poetry add django-cors-headers
 
-      - name: Add corsheaders explicitly
-        run: poetry add django-cors-headers
+      - name: Create initial migrations
+        run: |
+          poetry run python manage.py makemigrations users
+          poetry run python manage.py makemigrations posts
+          poetry run python manage.py makemigrations activities
 
-      - name: Run database migrations
+      - name: Apply migrations
         run: poetry run python manage.py migrate
 
       - name: Generate API documentation
