@@ -1,62 +1,35 @@
 name: Generate API Documentation
 
-on:
-  push:
-    branches: [master]
-  pull_request:
-    branches: [master]
-
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.11" # Django 5.1과 호환되는 버전으로 다운그레이드
+          python-version: "3.13"
+          allow-prereleases: true
+          check-latest: true
 
       - name: Install system dependencies
-        run: sudo apt-get install -y python3-dev
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3.13-dev
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
-          version: 1.5.1
-          virtualenvs-create: true
-          virtualenvs-in-project: true
+          version: 1.8.2
+
+      - name: Configure Poetry
+        run: |
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
+          poetry config experimental.system-git-client true
 
       - name: Install dependencies
         run: |
-          poetry install --no-root
-          poetry add django-cors-headers
-
-      - name: Create initial migrations
-        run: |
-          poetry run python manage.py makemigrations users
-          poetry run python manage.py makemigrations posts
-          poetry run python manage.py makemigrations activities
-
-      - name: Apply migrations
-        run: poetry run python manage.py migrate
-
-      - name: Generate API documentation
-        run: |
-          poetry run python manage.py generate_swagger --format yaml > swagger.yaml
-          poetry run python manage.py generate_swagger --format json > swagger.json
-
-      - name: Convert Swagger to HTML
-        uses: seeebiii/redoc-cli-github-action@v10
-        with:
-          args: "bundle -o api-docs.html swagger.yaml"
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        if: github.ref == 'refs/heads/master'
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./
-          publish_branch: gh-pages
+          poetry env use python3.13
+          poetry install --no-root --sync
