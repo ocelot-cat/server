@@ -4,7 +4,6 @@ version = "0.1.0"
 description = ""
 authors = ["devscarycat <devscarycat@icloud.com>"]
 license = "MIT"
-package-mode = false  # 이 라인 추가
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.14"
