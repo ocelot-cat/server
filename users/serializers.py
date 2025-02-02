@@ -1,5 +1,7 @@
+from rest_framework import serializers
 from .models import User
 from django.contrib.auth.password_validation import validate_password
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.serializers import ModelSerializer, Serializer, CharField
 
 
@@ -56,6 +58,23 @@ class ChangePasswordSerializer(Serializer):
 
 
 class UserSerializer(ModelSerializer):
+    password = serializers.CharField()
+
     class Meta:
         model = User
         fields = ("id", "username")
+
+
+class UserMeSerializer(ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "username", "email", "is_public"]
+
+
+# token_obtain_pair
+class TokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        token["id"] = user.id
+        return token

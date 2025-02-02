@@ -31,6 +31,16 @@ DEBUG = True
 # ⭐️ 우선 모든 호스트를 허용하도록 설정 (개발용) 추후 배포 단계에서 변경 필요
 ALLOWED_HOSTS = ["*"]
 
+# 허용할 Origin 설정 (개발용)
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:19000",
+    "http://192.168.0.221:19000",
+    "exp://192.168.0.221:8081",
+]
+
+# CSRF 예외 처리 (필요 시)
+CORS_ALLOW_ALL_ORIGINS = True  # 개발 단계에서만 사용
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
 
 # Application definition
 
@@ -52,12 +62,13 @@ CUSTOM_APPS = [
 ]
 
 
-THIRD_PARTY_APPS = ["rest_framework", "drf_yasg"]
+THIRD_PARTY_APPS = ["rest_framework", "drf_yasg", "corsheaders"]
 
 INSTALLED_APPS = SYSTEM_APPS + THIRD_PARTY_APPS + CUSTOM_APPS
 
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -88,6 +99,23 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework.authentication.SessionAuthentication",  # 추가
+    ),
+}
+
+SIMPLE_JWT = {
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "USER_ID_FIELD": "id",
+    "TOKEN_OBTAIN_SERIALIZER": "users.serializers.TokenObtainPairSerializer",
+}
+
+CORS_ALLOW_HEADERS = [
+    "authorization",  # Authorization 헤더 허용
+    "content-type",
+]
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 

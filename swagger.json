@@ -234,6 +234,34 @@
             },
             "parameters": []
         },
+        "/token/": {
+            "post": {
+                "operationId": "token_create",
+                "description": "Takes a set of user credentials and returns an access and refresh JSON web\ntoken pair to prove the authentication of those credentials.",
+                "parameters": [
+                    {
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/TokenObtainPair"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/TokenObtainPair"
+                        }
+                    }
+                },
+                "tags": [
+                    "token"
+                ]
+            },
+            "parameters": []
+        },
         "/users/": {
             "post": {
                 "operationId": "users_create",
@@ -283,6 +311,22 @@
                 "parameters": [],
                 "responses": {
                     "201": {
+                        "description": ""
+                    }
+                },
+                "tags": [
+                    "users"
+                ]
+            },
+            "parameters": []
+        },
+        "/users/me/": {
+            "get": {
+                "operationId": "users_me_list",
+                "description": "내 정보",
+                "parameters": [],
+                "responses": {
+                    "200": {
                         "description": ""
                     }
                 },
@@ -458,6 +502,25 @@
                     "type": "string",
                     "format": "date-time",
                     "readOnly": true
+                }
+            }
+        },
+        "TokenObtainPair": {
+            "required": [
+                "username",
+                "password"
+            ],
+            "type": "object",
+            "properties": {
+                "username": {
+                    "title": "Username",
+                    "type": "string",
+                    "minLength": 1
+                },
+                "password": {
+                    "title": "Password",
+                    "type": "string",
+                    "minLength": 1
                 }
             }
         }

@@ -3,6 +3,7 @@ from django.urls import path, include
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 
 schema_view = get_schema_view(
@@ -30,4 +31,5 @@ urlpatterns = [
     path("api/v1/posts/", include("posts.urls")),
     path("api/v1/activities/", include("activities.urls")),
     path("api/v1/search/", include("search.urls")),
+    path("api/v1/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
 ]
