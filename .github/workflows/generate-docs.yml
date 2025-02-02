@@ -30,11 +30,22 @@ jobs:
         uses: snok/install-poetry@v1
         with:
           version: 1.8.2
+          virtualenvs-in-project: true
+          installer-parallel: false
+
+      - name: Cache Poetry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pypoetry
+            ~/.local/share/pypoetry
+          key: poetry-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
 
       - name: Configure Poetry
         run: |
           poetry config virtualenvs.create true
           poetry config virtualenvs.in-project true
+          poetry config experimental.new-installer true
 
       - name: Install project dependencies
         run: |
