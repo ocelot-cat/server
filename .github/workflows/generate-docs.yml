@@ -8,46 +8,42 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v2
 
-      - name: Set up Python 3.13
-        uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v2
         with:
           python-version: "3.13"
-          allow-prereleases: true
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y software-properties-common
-          sudo add-apt-repository ppa:deadsnakes/ppa -y
-          sudo apt-get update
-          sudo apt-get install -y python3.13-dev python3.13-venv
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
-          version: 1.8.2
+          version: 1.5.1
+          virtualenvs-create: true
           virtualenvs-in-project: true
-          installer-parallel: false
 
-      - name: Cache Poetry
-        uses: actions/cache@v3
+      - name: Install dependencies
+        run: |
+          poetry install
+
+      - name: Generate API documentation
+        run: |
+          poetry run python manage.py generate_swagger --format yaml > swagger.yaml
+          poetry run python manage.py generate_swagger --format json > swagger.json
+
+      - name: Convert Swagger to HTML
+        uses: seeebiii/redoc-cli-github-action@v10
         with:
-          path: |
-            ~/.cache/pypoetry
-            ~/.local/share/pypoetry
-          key: poetry-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          args: "bundle -o api-docs.html swagger.yaml"
 
-      - name: Configure Poetry
-        run: |
-          poetry config virtualenvs.create true
-          poetry config virtualenvs.in-project true
-          poetry config experimental.new-installer true
-
-      - name: Install project dependencies
-        run: |
-          poetry env use python3.13
-          poetry install --no-root
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        if: github.ref == 'refs/heads/master'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
+          publish_branch: gh-pages
