@@ -30,6 +30,12 @@ jobs:
         run: |
           poetry install
 
+      - name: Add corsheaders explicitly
+        run: poetry add django-cors-headers
+
+      - name: Run database migrations
+        run: poetry run python manage.py migrate
+
       - name: Generate API documentation
         run: |
           poetry run python manage.py generate_swagger --format yaml > swagger.yaml
