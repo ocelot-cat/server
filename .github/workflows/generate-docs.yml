@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Ubuntu 24.04로 명시적 지정
     steps:
       - uses: actions/checkout@v4
 
@@ -17,12 +17,14 @@ jobs:
         with:
           python-version: "3.13"
           allow-prereleases: true
-          check-latest: true
 
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3.13-dev
+          sudo apt-get install -y software-properties-common
+          sudo add-apt-repository ppa:deadsnakes/ppa -y
+          sudo apt-get update
+          sudo apt-get install -y python3.13-dev python3.13-venv
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
@@ -33,9 +35,8 @@ jobs:
         run: |
           poetry config virtualenvs.create true
           poetry config virtualenvs.in-project true
-          poetry config experimental.system-git-client true
 
-      - name: Install dependencies
+      - name: Install project dependencies
         run: |
           poetry env use python3.13
-          poetry install --no-root --sync
+          poetry install --no-root
