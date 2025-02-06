@@ -62,7 +62,7 @@ CUSTOM_APPS = [
 ]
 
 
-THIRD_PARTY_APPS = ["rest_framework", "drf_yasg", "corsheaders"]
+THIRD_PARTY_APPS = ["corsheaders", "rest_framework", "drf_yasg"]
 
 INSTALLED_APPS = SYSTEM_APPS + THIRD_PARTY_APPS + CUSTOM_APPS
 
@@ -77,6 +77,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
 
 ROOT_URLCONF = "config.urls"
 
