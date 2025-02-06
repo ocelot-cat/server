@@ -1,7 +1,4 @@
 from rest_framework import serializers
-from rest_framework.fields import SerializerMethodField
-
-from posts.serializers import PostImageSerializer
 from .models import User
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -68,40 +65,21 @@ class UserSerializer(ModelSerializer):
         fields = ("id", "username")
 
 
-class UserMeSerializer(ModelSerializer):
-    followers = SerializerMethodField()
-    followings = SerializerMethodField()
-    posts = SerializerMethodField()
+class UserMeSerializer(serializers.ModelSerializer):
+    followers_count = serializers.IntegerField(read_only=True)
+    followings_count = serializers.IntegerField(read_only=True)
+    posts_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = User
         fields = [
             "id",
             "username",
-            "email",
             "is_public",
-            "followers",
-            "followings",
-            "posts",
+            "followers_count",
+            "followings_count",
+            "posts_count",
         ]
-
-    def get_followers(self, obj):
-        return {
-            "count": obj.followers.count(),
-            "results": FollowSerializer(obj.followers.all(), many=True).data,
-        }
-
-    def get_followings(self, obj):
-        return {
-            "count": obj.followings.count(),
-            "results": FollowSerializer(obj.followings.all(), many=True).data,
-        }
-
-    def get_posts(self, obj):
-        return {
-            "count": obj.posts.count(),
-            "results": PostImageSerializer(obj.posts.all(), many=True).data,
-        }
 
 
 # token_obtain_pair

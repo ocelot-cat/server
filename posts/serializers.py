@@ -59,3 +59,14 @@ class PostRetrieveSerializer(serializers.ModelSerializer):
 
     def get_likes_count(self, obj):
         return obj.likes.count()
+
+
+class PostListSerializer(serializers.ModelSerializer):
+    images = PostImageSerializer(many=True, source="images.all")
+    tags = TagSerializer(many=True)
+    likes_count = serializers.IntegerField(source="likes.count", read_only=True)
+
+    class Meta:
+        model = Post
+        fields = ["id", "created_at", "images", "tags", "likes_count"]
+        read_only_fields = ["id", "created_at"]

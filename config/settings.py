@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 
+from django.utils.timezone import timedelta
 from drf_yasg import openapi
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -110,6 +111,9 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
     "USER_ID_FIELD": "id",
     "TOKEN_OBTAIN_SERIALIZER": "users.serializers.TokenObtainPairSerializer",
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
 }
 
 CORS_ALLOW_HEADERS = [
