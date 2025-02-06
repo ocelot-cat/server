@@ -7,9 +7,9 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from posts.serializers import PostRetrieveSerializer
+from posts.serializers import PostListSerializer, PostRetrieveSerializer
 from users.models import User
-from posts.models import Post
+from posts.models import Post, PostImage, Tag
 from users.serializers import (
     ChangePasswordSerializer,
     FollowSerializer,
@@ -58,28 +58,14 @@ class UserView(APIView):
 
 
 class UserMeView(APIView):
-    """내 정보"""
+    """내 정보 조회"""
 
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = get_object_or_404(
-            User.objects.prefetch_related(
-                Prefetch(
-                    "followers",
-                    queryset=User.objects.all(),
-                    to_attr="prefetched_followers",
-                ),
-                Prefetch(
-                    "followings",
-                    queryset=User.objects.all(),
-                    to_attr="prefetched_followings",
-                ),
-                Prefetch(
-                    "posts", queryset=Post.objects.all(), to_attr="prefetched_posts"
-                ),
-            ).annotate(
+            User.objects.annotate(
                 followers_count=Count("followers"),
                 followings_count=Count("followings"),
                 posts_count=Count("posts"),
@@ -90,18 +76,33 @@ class UserMeView(APIView):
         return Response(serializer.data)
 
 
-class PostsOwnList(APIView):
-    """사용자가 소유한 포스트 리스트"""
+class PostPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "page_size"
+    max_page_size = 100
 
-    # 추후 파지네이션 포스트가 늘어날걸 대비해서 파지네이션 진행해야함
+
+class PostsOwnList(APIView):
+    """사용자 포스트 목록"""
+
+    pagination_class = PostPagination
 
     def get(self, request, username):
         user = get_object_or_404(User, username=username)
-        posts = Post.objects.filter(author=user).prefetch_related(
-            "tags", "likes", "images"
+        queryset = (
+            Post.objects.filter(author=user)
+            .select_related("author")
+            .prefetch_related(
+                Prefetch("images", queryset=PostImage.objects.only("id", "image")),
+                Prefetch("tags", queryset=Tag.objects.only("id", "name")),
+            )
         )
-        serializer = PostRetrieveSerializer(posts, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(queryset, request)
+
+        serializer = PostListSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class FollowPagination(PageNumberPagination):
