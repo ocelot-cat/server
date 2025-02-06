@@ -1,13 +1,18 @@
+from django.core.cache import cache
+from django.db.models import Count, Prefetch
 from rest_framework import status
 from rest_framework.generics import get_object_or_404
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from posts.serializers import PostRetrieveSerializer
 from users.models import User
 from posts.models import Post
 from users.serializers import (
     ChangePasswordSerializer,
+    FollowSerializer,
     UserCreateSerializer,
     UserFollowersListSerializer,
     UserFollowingsListSerializer,
@@ -55,12 +60,33 @@ class UserView(APIView):
 class UserMeView(APIView):
     """내 정보"""
 
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        serializer = UserMeSerializer(
-            request.user, context={"request": request}
-        )  # context 추가
+        user = get_object_or_404(
+            User.objects.prefetch_related(
+                Prefetch(
+                    "followers",
+                    queryset=User.objects.all(),
+                    to_attr="prefetched_followers",
+                ),
+                Prefetch(
+                    "followings",
+                    queryset=User.objects.all(),
+                    to_attr="prefetched_followings",
+                ),
+                Prefetch(
+                    "posts", queryset=Post.objects.all(), to_attr="prefetched_posts"
+                ),
+            ).annotate(
+                followers_count=Count("followers"),
+                followings_count=Count("followings"),
+                posts_count=Count("posts"),
+            ),
+            id=request.user.id,
+        )
+        serializer = UserMeSerializer(user)
         return Response(serializer.data)
 
 
@@ -78,26 +104,43 @@ class PostsOwnList(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class FollowPagination(PageNumberPagination):
+    """팔로우 리스트 페이지네이션"""
+
+    page_size = 10
+    page_size_query_param = "page_size"
+
+
 class UsersFollowingsList(APIView):
     """내가 팔로우 하는 사람의 리스트 (팔로우 followings)"""
 
+    pagination_class = FollowPagination
+
     def get(self, request, username):
-        user = get_object_or_404(
-            User.objects.prefetch_related("followings"), username=username
-        )
-        serializer = UserFollowingsListSerializer(user)
-        return Response(serializer.data)
+        user = get_object_or_404(User, username=username)
+        followings = user.followings.all().only("id", "username")
+        paginator = self.pagination_class()
+        result_page = paginator.paginate_queryset(followings, request)
+        serializer = FollowSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class UsersFollowersList(APIView):
     """나를 팔로우 해주는 사람의 리스트 (팔로워 followers)"""
 
     def get(self, request, username):
+        cache_key = f"user_followers_{username}"
+        cached_data = cache.get(cache_key)
+
+        if cached_data:
+            return Response(cached_data)
+
         user = get_object_or_404(
             User.objects.prefetch_related("followers"), username=username
         )
         serializer = UserFollowersListSerializer(user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        cache.set(cache_key, serializer.data, timeout=60 * 15)
+        return Response(serializer.data)
 
 
 class UserFollowView(APIView):
