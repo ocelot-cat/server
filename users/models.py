@@ -5,8 +5,17 @@ from django.db import models
 class User(AbstractUser):
     is_public = models.BooleanField(default=True)
     followings = models.ManyToManyField(
-        "self", symmetrical=False, related_name="followers", blank=True
+        "self",
+        symmetrical=False,
+        related_name="followers",
+        blank=True,
+        db_index=True,
     )
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["username"], name="username_idx"),
+        ]
 
 
 class UserInterest(models.Model):
