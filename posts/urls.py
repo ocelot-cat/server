@@ -24,4 +24,9 @@ urlpatterns = [
         views.PostLikesList.as_view(),
         name="post-likes-list",
     ),  # 포스트에 해당하는 좋아요 목록
+    path(
+        "posts/<int:post_id>/upload-image/",
+        views.PostImageUploadView.as_view(),
+        name="post-image-upload",  # 사진업로드
+    ),
 ]

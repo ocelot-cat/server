@@ -1,5 +1,5 @@
 from django.db import models
-
+from storages.backends.gcloud import GoogleCloudStorage
 from core.models import CommonModel
 from users.models import User
 
@@ -20,6 +20,9 @@ class Post(CommonModel):
         return f"{self.author.username}'s post"
 
 
+storage = GoogleCloudStorage()
+
+
 class PostImage(CommonModel):
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="images")
-    image = models.ImageField(upload_to="post_images/")
+    image = models.ImageField(storage=storage, upload_to="post_images/")
