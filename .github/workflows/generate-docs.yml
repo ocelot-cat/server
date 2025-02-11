@@ -11,8 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    env:
-      GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
     steps:
       - uses: actions/checkout@v2
 
@@ -35,9 +33,11 @@ jobs:
       - name: Set up Google Cloud Credentials
         run: |
           echo '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}' > google-credentials.json
-          echo "GOOGLE_APPLICATION_CREDENTIALS=google-credentials.json" >> $GITHUB_ENV
+        shell: bash
 
       - name: Generate API documentation
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: google-credentials.json
         run: |
           poetry run python manage.py generate_swagger --format yaml > swagger.yaml
           poetry run python manage.py generate_swagger --format json > swagger.json

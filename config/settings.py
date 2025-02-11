@@ -130,8 +130,6 @@ CORS_ALLOW_HEADERS = [
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-google_credentials = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-
 DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
 GS_BUCKET_NAME = "django-ocelot"
 GS_PROJECT_ID = "django-ocelot"
