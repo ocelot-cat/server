@@ -15,7 +15,7 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-
+ 
 from django.utils.timezone import timedelta
 from drf_yasg import openapi
 from google.oauth2 import service_account
@@ -135,9 +135,15 @@ google_credentials = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
 GS_BUCKET_NAME = "django-ocelot"
 GS_PROJECT_ID = "django-ocelot"
-GS_CREDENTIALS = service_account.Credentials.from_service_account_info(
-    json.loads(google_credentials)
-)
+
+google_credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+if google_credentials_path and os.path.exists(google_credentials_path):
+    with open(google_credentials_path, 'r') as f:
+        google_credentials = json.load(f)
+    GS_CREDENTIALS = service_account.Credentials.from_service_account_info(google_credentials)
+else:
+    print("WARNING: GOOGLE_APPLICATION_CREDENTIALS not set or file not found")
+    GS_CREDENTIALS = None
 
 DATABASES = {
     "default": {
