@@ -30,11 +30,14 @@ jobs:
         run: |
           poetry install
 
-      - name: Set up Google Cloud Credentials
+      - name: Generate API documentation
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: google-credentials.json
         run: |
-          echo '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}' > google-credentials.json
-          echo "GOOGLE_APPLICATION_CREDENTIALS=${{ github.workspace }}/google-credentials.json" >> $GITHUB_ENV
-        shell: bash
+          poetry run python manage.py generate_swagger --format yaml > swagger.yaml
+          poetry run python manage.py generate_swagger --format json > swagger.json
+          echo "Swagger YAML content:"
+          cat swagger.yaml
 
       - name: Generate API documentation
         env:
