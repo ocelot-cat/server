@@ -30,7 +30,7 @@ jobs:
         run: |
           poetry install
 
-      name: Set up Google Cloud Credentials
+      - name: Set up Google Cloud Credentials
         run: |
           echo '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}' > google-credentials.json
           echo "GOOGLE_APPLICATION_CREDENTIALS=${{ github.workspace }}/google-credentials.json" >> $GITHUB_ENV
