@@ -34,16 +34,8 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: google-credentials.json
         run: |
-          poetry run python manage.py generate_swagger --format yaml > swagger.yaml
-          poetry run python manage.py generate_swagger --format json > swagger.json
-          echo "Swagger YAML content:"
-          cat swagger.yaml
-
-      - name: Generate API documentation
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: google-credentials.json
-        run: |
-          poetry run python manage.py generate_swagger --format yaml > swagger.yaml
+          poetry run python manage.py generate_swagger --format yaml > swagger_temp.yaml
+          tail -n +2 swagger_temp.yaml > swagger.yaml
           poetry run python manage.py generate_swagger --format json > swagger.json
 
       - name: Convert Swagger to HTML
