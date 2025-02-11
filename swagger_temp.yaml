@@ -1,3 +1,4 @@
+GOOGLE_APPLICATION_CREDENTIALS not set or file not found
 swagger: '2.0'
 info:
   title: ocelot-cat API

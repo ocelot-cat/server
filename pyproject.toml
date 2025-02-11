@@ -4,6 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["devscarycat <devscarycat@icloud.com>"]
 license = "MIT"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.14"
@@ -13,6 +14,10 @@ pillow = ">=11.1.0,<12.0.0"
 drf-yasg = ">=1.21.8,<2.0.0"
 djangorestframework-simplejwt = "^5.4.0"
 django-cors-headers = "^4.6.0"
+django-storages = {extras = ["google"], version = "^1.14.4"}
+google-auth = "^2.38.0"
+google-cloud-storage = "^3.0.0"
+python-dotenv = "^1.0.1"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

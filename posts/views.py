@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 from posts.models import Post, PostImage, Tag
 from posts.serializers import (
     PostCreateSerializer,
+    PostImageSerializer,
     PostRetrieveSerializer,
 )
 from users.models import UserInterest
@@ -146,3 +147,25 @@ class PostLikesList(APIView):
         likes = post.likes.all()
         serializer = UserSerializer(likes, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class PostImageUploadView(APIView):
+    """사진 업로드"""
+
+    def post(self, request, post_id):
+        try:
+            post = Post.objects.get(id=post_id)
+        except Post.DoesNotExist:
+            return Response(
+                {"error": "Post not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        image = request.FILES.get("image")
+        if not image:
+            return Response(
+                {"error": "No image provided"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        post_image = PostImage.objects.create(post=post, image=image)
+        serializer = PostImageSerializer(post_image)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

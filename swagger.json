@@ -1,3 +1,4 @@
+GOOGLE_APPLICATION_CREDENTIALS not set or file not found
 {
     "swagger": "2.0",
     "info": {
@@ -61,6 +62,29 @@
                 ]
             },
             "parameters": []
+        },
+        "/posts/posts/{post_id}/upload-image/": {
+            "post": {
+                "operationId": "posts_posts_upload-image_create",
+                "description": "사진 업로드",
+                "parameters": [],
+                "responses": {
+                    "201": {
+                        "description": ""
+                    }
+                },
+                "tags": [
+                    "posts"
+                ]
+            },
+            "parameters": [
+                {
+                    "name": "post_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "string"
+                }
+            ]
         },
         "/posts/recommended/": {
             "get": {
