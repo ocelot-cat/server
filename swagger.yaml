@@ -19,191 +19,125 @@ securityDefinitions:
 security:
 - Basic: []
 paths:
-  /activities/my:
+  /products/:
     get:
-      operationId: activities_my_list
+      operationId: products_list
       description: ''
       parameters: []
       responses:
         '200':
           description: ''
       tags:
-      - activities
-    parameters: []
-  /posts/:
+      - products
     post:
-      operationId: posts_create
-      description: 포스트 생성
+      operationId: products_create
+      description: ''
       parameters: []
       responses:
         '201':
           description: ''
       tags:
-      - posts
+      - products
     parameters: []
-  /posts/posts/{post_id}/upload-image/:
-    post:
-      operationId: posts_posts_upload-image_create
-      description: 사진 업로드
-      parameters: []
-      responses:
-        '201':
-          description: ''
-      tags:
-      - posts
-    parameters:
-    - name: post_id
-      in: path
-      required: true
-      type: string
-  /posts/recommended/:
+  /products/{id}/:
     get:
-      operationId: posts_recommended_list
-      description: 추천 포스트 목록
+      operationId: products_read
+      description: ''
       parameters: []
       responses:
         '200':
           description: ''
       tags:
-      - posts
-    parameters: []
-  /posts/tag/{tag_name}/:
-    get:
-      operationId: posts_tag_read
-      description: 태그별 포스트 목록
-      parameters: []
-      responses:
-        '200':
-          description: ''
-          schema:
-            $ref: '#/definitions/PostRetrieve'
-      tags:
-      - posts
-    parameters:
-    - name: tag_name
-      in: path
-      required: true
-      type: string
-  /posts/{id}/:
-    get:
-      operationId: posts_read
-      description: 포스트 디테일
+      - products
+    put:
+      operationId: products_update
+      description: ''
       parameters: []
       responses:
         '200':
           description: ''
       tags:
-      - posts
+      - products
     delete:
-      operationId: posts_delete
-      description: 포스트 디테일
+      operationId: products_delete
+      description: ''
       parameters: []
       responses:
         '204':
           description: ''
       tags:
-      - posts
+      - products
     parameters:
     - name: id
       in: path
       required: true
       type: string
-  /posts/{post_id}/like/:
-    post:
-      operationId: posts_like_create
-      description: 포스트에 like,unlike 기능
-      parameters: []
-      responses:
-        '201':
-          description: ''
-      tags:
-      - posts
-    parameters:
-    - name: post_id
-      in: path
-      required: true
-      type: string
-  /posts/{post_id}/likes/:
-    get:
-      operationId: posts_likes_list
-      description: 포스트 디테일에 좋아요를 누른 자세한 사용자 목록
-      parameters: []
-      responses:
-        '200':
-          description: ''
-      tags:
-      - posts
-    parameters:
-    - name: post_id
-      in: path
-      required: true
-      type: string
-  /search/posts/:
-    get:
-      operationId: search_posts_list
-      description: ''
-      parameters: []
-      responses:
-        '200':
-          description: ''
-      tags:
-      - search
-    parameters: []
-  /search/tags/:
-    get:
-      operationId: search_tags_list
-      description: ''
-      parameters: []
-      responses:
-        '200':
-          description: ''
-      tags:
-      - search
-    parameters: []
-  /search/users/:
-    get:
-      operationId: search_users_list
-      description: ''
-      parameters: []
-      responses:
-        '200':
-          description: ''
-      tags:
-      - search
-    parameters: []
   /token/:
     post:
       operationId: token_create
       description: |-
         Takes a set of user credentials and returns an access and refresh JSON web
         token pair to prove the authentication of those credentials.
-      parameters:
-      - name: data
-        in: body
-        required: true
-        schema:
-          $ref: '#/definitions/TokenObtainPair'
+      parameters: []
       responses:
         '201':
           description: ''
-          schema:
-            $ref: '#/definitions/TokenObtainPair'
       tags:
       - token
     parameters: []
   /users/:
+    get:
+      operationId: users_list
+      description: ''
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      tags:
+      - users
     post:
       operationId: users_create
-      description: 회원 가입, 정보 수정, 탈퇴
+      description: ''
       parameters: []
       responses:
         '201':
           description: ''
       tags:
       - users
+    parameters: []
+  /users/company/:
+    get:
+      operationId: users_company_list
+      description: ''
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      tags:
+      - users
+    post:
+      operationId: users_company_create
+      description: ''
+      parameters: []
+      responses:
+        '201':
+          description: ''
+      tags:
+      - users
+    parameters: []
+  /users/company/{id}/:
+    get:
+      operationId: users_company_read
+      description: ''
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      tags:
+      - users
     put:
-      operationId: users_update
-      description: 회원 가입, 정보 수정, 탈퇴
+      operationId: users_company_update
+      description: ''
       parameters: []
       responses:
         '200':
@@ -211,168 +145,17 @@ paths:
       tags:
       - users
     delete:
-      operationId: users_delete
-      description: |-
-        - 계정 임시 비활성화 상태로만 변경하려면 -
-        user.is_active = False
-        user.save()
+      operationId: users_company_delete
+      description: ''
       parameters: []
       responses:
         '204':
           description: ''
       tags:
       - users
-    parameters: []
-  /users/change-password/:
-    post:
-      operationId: users_change-password_create
-      description: '"비밀번호 변경'
-      parameters: []
-      responses:
-        '201':
-          description: ''
-      tags:
-      - users
-    parameters: []
-  /users/me/:
-    get:
-      operationId: users_me_list
-      description: 내 정보 조회
-      parameters: []
-      responses:
-        '200':
-          description: ''
-      tags:
-      - users
-    parameters: []
-  /users/{username}/follow/:
-    post:
-      operationId: users_follow_create
-      description: 팔로우, 언팔로우
-      parameters: []
-      responses:
-        '201':
-          description: ''
-      tags:
-      - users
     parameters:
-    - name: username
+    - name: id
       in: path
       required: true
       type: string
-  /users/{username}/followers:
-    get:
-      operationId: users_followers_list
-      description: 나를 팔로우 해주는 사람의 리스트 (팔로워 followers)
-      parameters: []
-      responses:
-        '200':
-          description: ''
-      tags:
-      - users
-    parameters:
-    - name: username
-      in: path
-      required: true
-      type: string
-  /users/{username}/followings:
-    get:
-      operationId: users_followings_list
-      description: 내가 팔로우 하는 사람의 리스트 (팔로우 followings)
-      parameters: []
-      responses:
-        '200':
-          description: ''
-      tags:
-      - users
-    parameters:
-    - name: username
-      in: path
-      required: true
-      type: string
-  /users/{username}/posts:
-    get:
-      operationId: users_posts_list
-      description: 사용자 포스트 목록
-      parameters: []
-      responses:
-        '200':
-          description: ''
-      tags:
-      - users
-    parameters:
-    - name: username
-      in: path
-      required: true
-      type: string
-definitions:
-  Tag:
-    required:
-    - name
-    type: object
-    properties:
-      id:
-        title: ID
-        type: integer
-        readOnly: true
-      name:
-        title: Name
-        type: string
-        maxLength: 50
-        minLength: 1
-  PostImage:
-    type: object
-    properties:
-      id:
-        title: ID
-        type: integer
-        readOnly: true
-      image:
-        title: Image
-        type: string
-        readOnly: true
-        format: uri
-  PostRetrieve:
-    type: object
-    properties:
-      id:
-        title: ID
-        type: integer
-        readOnly: true
-      author:
-        title: Author
-        type: string
-        readOnly: true
-      tags:
-        type: array
-        items:
-          $ref: '#/definitions/Tag'
-        readOnly: true
-      images:
-        type: array
-        items:
-          $ref: '#/definitions/PostImage'
-        readOnly: true
-      likes_count:
-        title: Likes count
-        type: string
-        readOnly: true
-      created_at:
-        title: Created at
-        type: string
-        format: date-time
-        readOnly: true
-  TokenObtainPair:
-    required:
-    - username
-    - password
-    type: object
-    properties:
-      username:
-        title: Username
-        type: string
-        minLength: 1
-      password:
-        title: Password
-        type: string
-        minLength: 1
+definitions: {}
