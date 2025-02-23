@@ -15,7 +15,7 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
- 
+
 from django.utils.timezone import timedelta
 from drf_yasg import openapi
 from google.oauth2 import service_account
@@ -63,9 +63,7 @@ SYSTEM_APPS = [
 CUSTOM_APPS = [
     "core.apps.CoreConfig",
     "users.apps.UsersConfig",
-    "posts.apps.PostsConfig",
-    "activities.apps.ActivitiesConfig",
-    "search.apps.SearchConfig",
+    "products.apps.ProductsConfig",
 ]
 
 
@@ -137,9 +135,11 @@ GS_PROJECT_ID = "django-ocelot"
 google_credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 if google_credentials_path and os.path.exists(google_credentials_path):
     try:
-        with open(google_credentials_path, 'r') as f:
+        with open(google_credentials_path, "r") as f:
             google_credentials = json.load(f)
-        GS_CREDENTIALS = service_account.Credentials.from_service_account_info(google_credentials)
+        GS_CREDENTIALS = service_account.Credentials.from_service_account_info(
+            google_credentials
+        )
     except json.JSONDecodeError as e:
         print(f"Error decoding Google Cloud credentials: {e}")
         GS_CREDENTIALS = None
