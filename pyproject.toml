@@ -18,6 +18,7 @@ django-storages = {extras = ["google"], version = "^1.14.4"}
 google-auth = "^2.38.0"
 google-cloud-storage = "^3.0.0"
 python-dotenv = "^1.0.1"
+qrcode = "^8.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
