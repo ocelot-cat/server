@@ -1,13 +1,14 @@
+from uuid import uuid4
 from django.db import models, transaction
 from django.db.models import F
-
 from typing import List, Dict
-
 from users.models import User
+from django.urls import reverse
 
 
 class Product(models.Model):
     name = models.CharField(max_length=100)
+    uuid = models.UUIDField(default=uuid4, editable=False, unique=True)
     category = models.CharField(max_length=50)
     piece_quantity = models.IntegerField(default=0)
     box_quantity = models.IntegerField(default=0)
@@ -15,6 +16,12 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+
+    def get_absolute_url(self):
+        return reverse("product_detail", kwargs={"uuid": self.uuid})
+
+    def get_qr_code_url(self):
+        return f"http://127.0.0.1:8000/product/{self.uuid}"
 
 
 class ProductRecord(models.Model):

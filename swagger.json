@@ -109,6 +109,78 @@ GOOGLE_APPLICATION_CREDENTIALS not set or file not found
                 }
             ]
         },
+        "/products/{uuid}/": {
+            "get": {
+                "operationId": "products_read",
+                "description": "",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": ""
+                    }
+                },
+                "tags": [
+                    "products"
+                ]
+            },
+            "put": {
+                "operationId": "products_update",
+                "description": "",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": ""
+                    }
+                },
+                "tags": [
+                    "products"
+                ]
+            },
+            "delete": {
+                "operationId": "products_delete",
+                "description": "",
+                "parameters": [],
+                "responses": {
+                    "204": {
+                        "description": ""
+                    }
+                },
+                "tags": [
+                    "products"
+                ]
+            },
+            "parameters": [
+                {
+                    "name": "uuid",
+                    "in": "path",
+                    "required": true,
+                    "type": "string"
+                }
+            ]
+        },
+        "/products/{uuid}/qr/": {
+            "get": {
+                "operationId": "products_qr_list",
+                "description": "",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": ""
+                    }
+                },
+                "tags": [
+                    "products"
+                ]
+            },
+            "parameters": [
+                {
+                    "name": "uuid",
+                    "in": "path",
+                    "required": true,
+                    "type": "string"
+                }
+            ]
+        },
         "/token/": {
             "post": {
                 "operationId": "token_create",

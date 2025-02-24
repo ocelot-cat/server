@@ -9,9 +9,4 @@ class ProductSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "category",
-            "quantity",
-            "unit",
-            "qr_code",
-            "received_by",
-            "company",
         ]

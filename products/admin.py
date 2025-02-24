@@ -12,6 +12,7 @@ class ProductRecordInline(admin.TabularInline):
 class ProductAdmin(admin.ModelAdmin):
     list_display = (
         "name",
+        "uuid",
         "category",
         "piece_quantity",
         "box_quantity",
