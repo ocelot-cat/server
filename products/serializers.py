@@ -9,4 +9,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "category",
+            "piece_quantity",
+            "box_quantity",
+            "container_quantity",
         ]
