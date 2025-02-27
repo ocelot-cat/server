@@ -21,7 +21,7 @@ class Product(models.Model):
         return reverse("product_detail", kwargs={"uuid": self.uuid})
 
     def get_qr_code_url(self):
-        return f"http://127.0.0.1:8000/product/{self.uuid}"
+        return f"http://127.0.0.1:8000/api/v1/products/{self.uuid}"
 
 
 class ProductRecord(models.Model):

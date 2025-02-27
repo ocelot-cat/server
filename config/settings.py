@@ -49,6 +49,11 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_ALL_ORIGINS = True  # 개발 단계에서만 사용
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
 
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:19006",  # Expo 개발 서버
+    "http://127.0.0.1:8000",  # Django 서버
+]
+
 # Application definition
 
 SYSTEM_APPS = [
