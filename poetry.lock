@@ -236,39 +236,39 @@ django = ">=4.2"
 
 [[package]]
 name = "djangorestframework-simplejwt"
-version = "5.4.0"
+version = "5.5.0"
 description = "A minimal JSON Web Token authentication plugin for Django REST Framework"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "djangorestframework_simplejwt-5.4.0-py3-none-any.whl", hash = "sha256:7aec953db9ed4163430c16d086eecb0f028f814ce6bba62b06c25919261e9077"},
-    {file = "djangorestframework_simplejwt-5.4.0.tar.gz", hash = "sha256:cccecce1a0e1a4a240fae80da73e5fc23055bababb8b67de88fa47cd36822320"},
+    {file = "djangorestframework_simplejwt-5.5.0-py3-none-any.whl", hash = "sha256:4ef6b38af20cdde4a4a51d1fd8e063cbbabb7b45f149cc885d38d905c5a62edb"},
+    {file = "djangorestframework_simplejwt-5.5.0.tar.gz", hash = "sha256:474a1b737067e6462b3609627a392d13a4da8a08b1f0574104ac6d7b1406f90e"},
 ]
 
 [package.dependencies]
 django = ">=4.2"
 djangorestframework = ">=3.14"
-pyjwt = ">=1.7.1,<3"
+pyjwt = ">=1.7.1,<2.10.0"
 
 [package.extras]
 crypto = ["cryptography (>=3.3.1)"]
-dev = ["Sphinx (>=1.6.5,<2)", "cryptography", "flake8", "freezegun", "ipython", "isort", "pep8", "pytest", "pytest-cov", "pytest-django", "pytest-watch", "pytest-xdist", "python-jose (==3.3.0)", "sphinx_rtd_theme (>=0.1.9)", "tox", "twine", "wheel"]
+dev = ["Sphinx (>=1.6.5,<2)", "cryptography", "freezegun", "ipython", "pre-commit", "pytest", "pytest-cov", "pytest-django", "pytest-watch", "pytest-xdist", "python-jose (==3.3.0)", "pyupgrade", "ruff", "sphinx_rtd_theme (>=0.1.9)", "tox", "twine", "wheel", "yesqa"]
 doc = ["Sphinx (>=1.6.5,<2)", "sphinx_rtd_theme (>=0.1.9)"]
-lint = ["flake8", "isort", "pep8"]
+lint = ["pre-commit", "pyupgrade", "ruff", "yesqa"]
 python-jose = ["python-jose (==3.3.0)"]
 test = ["cryptography", "freezegun", "pytest", "pytest-cov", "pytest-django", "pytest-xdist", "tox"]
 
 [[package]]
 name = "drf-yasg"
-version = "1.21.8"
+version = "1.21.9"
 description = "Automated generation of real Swagger/OpenAPI 2.0 schemas from Django Rest Framework code."
 optional = false
 python-versions = ">=3.6"
 groups = ["main"]
 files = [
-    {file = "drf-yasg-1.21.8.tar.gz", hash = "sha256:cbb7f81c3d140f2207392b4bc5dde65384eeb58e1b7eea1a6d641dec2f7352a9"},
-    {file = "drf_yasg-1.21.8-py3-none-any.whl", hash = "sha256:a410b235e7cc2c0f6b9d4f671e8efe6f2d27cba398fbd16064e16ef814998444"},
+    {file = "drf-yasg-1.21.9.tar.gz", hash = "sha256:53d4319769bac121c56be18095342392b66d755e9fdd309414e1a86b5c3dd5ea"},
+    {file = "drf_yasg-1.21.9-py3-none-any.whl", hash = "sha256:8548cdb072076c35064e57b11a6c955e47117605774b310b3aeab884256e9f19"},
 ]
 
 [package.dependencies]
@@ -358,20 +358,20 @@ grpc = ["grpcio (>=1.38.0,<2.0dev)", "grpcio-status (>=1.38.0,<2.0.dev0)"]
 
 [[package]]
 name = "google-cloud-storage"
-version = "3.0.0"
+version = "3.1.0"
 description = "Google Cloud Storage API client library"
 optional = false
 python-versions = ">=3.7"
 groups = ["main"]
 files = [
-    {file = "google_cloud_storage-3.0.0-py2.py3-none-any.whl", hash = "sha256:f85fd059650d2dbb0ac158a9a6b304b66143b35ed2419afec2905ca522eb2c6a"},
-    {file = "google_cloud_storage-3.0.0.tar.gz", hash = "sha256:2accb3e828e584888beff1165e5f3ac61aa9088965eb0165794a82d8c7f95297"},
+    {file = "google_cloud_storage-3.1.0-py2.py3-none-any.whl", hash = "sha256:eaf36966b68660a9633f03b067e4a10ce09f1377cae3ff9f2c699f69a81c66c6"},
+    {file = "google_cloud_storage-3.1.0.tar.gz", hash = "sha256:944273179897c7c8a07ee15f2e6466a02da0c7c4b9ecceac2a26017cb2972049"},
 ]
 
 [package.dependencies]
 google-api-core = ">=2.15.0,<3.0.0dev"
 google-auth = ">=2.26.1,<3.0dev"
-google-cloud-core = ">=2.3.0,<3.0dev"
+google-cloud-core = ">=2.4.2,<3.0dev"
 google-crc32c = ">=1.0,<2.0dev"
 google-resumable-media = ">=2.7.2"
 requests = ">=2.18.0,<3.0.0dev"
@@ -653,14 +653,14 @@ pyasn1 = ">=0.4.6,<0.7.0"
 
 [[package]]
 name = "pyjwt"
-version = "2.10.1"
+version = "2.9.0"
 description = "JSON Web Token implementation in Python"
 optional = false
-python-versions = ">=3.9"
+python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "PyJWT-2.10.1-py3-none-any.whl", hash = "sha256:dcdd193e30abefd5debf142f9adfcdd2b58004e644f25406ffaebd50bd98dacb"},
-    {file = "pyjwt-2.10.1.tar.gz", hash = "sha256:3cc5772eb20009233caf06e9d8a0577824723b44e6648ee0a2aedb6cf9381953"},
+    {file = "PyJWT-2.9.0-py3-none-any.whl", hash = "sha256:3b02fb0f44517787776cf48f2ae25d8e14f300e6d7545a4315cee571a415e850"},
+    {file = "pyjwt-2.9.0.tar.gz", hash = "sha256:7e1e5b56cc735432a7369cbfa0efe50fa113ebecdc04ae6922deba8b84582d0c"},
 ]
 
 [package.extras]

@@ -69,6 +69,7 @@ CUSTOM_APPS = [
     "core.apps.CoreConfig",
     "users.apps.UsersConfig",
     "products.apps.ProductsConfig",
+    "companies.apps.CompaniesConfig",
 ]
 
 
