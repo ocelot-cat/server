@@ -31,6 +31,130 @@ GOOGLE_APPLICATION_CREDENTIALS not set or file not found
         }
     ],
     "paths": {
+        "/companies/": {
+            "get": {
+                "operationId": "companies_list",
+                "description": "",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": ""
+                    }
+                },
+                "tags": [
+                    "companies"
+                ]
+            },
+            "post": {
+                "operationId": "companies_create",
+                "description": "",
+                "parameters": [],
+                "responses": {
+                    "201": {
+                        "description": ""
+                    }
+                },
+                "tags": [
+                    "companies"
+                ]
+            },
+            "parameters": []
+        },
+        "/companies/{company_id}/invite/": {
+            "post": {
+                "operationId": "companies_invite_create",
+                "description": "",
+                "parameters": [],
+                "responses": {
+                    "201": {
+                        "description": ""
+                    }
+                },
+                "tags": [
+                    "companies"
+                ]
+            },
+            "parameters": [
+                {
+                    "name": "company_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "string"
+                }
+            ]
+        },
+        "/companies/{id}/": {
+            "get": {
+                "operationId": "companies_read",
+                "description": "",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": ""
+                    }
+                },
+                "tags": [
+                    "companies"
+                ]
+            },
+            "put": {
+                "operationId": "companies_update",
+                "description": "",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": ""
+                    }
+                },
+                "tags": [
+                    "companies"
+                ]
+            },
+            "delete": {
+                "operationId": "companies_delete",
+                "description": "",
+                "parameters": [],
+                "responses": {
+                    "204": {
+                        "description": ""
+                    }
+                },
+                "tags": [
+                    "companies"
+                ]
+            },
+            "parameters": [
+                {
+                    "name": "id",
+                    "in": "path",
+                    "required": true,
+                    "type": "string"
+                }
+            ]
+        },
+        "/companies/{token}/accept/": {
+            "get": {
+                "operationId": "companies_accept_list",
+                "description": "",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": ""
+                    }
+                },
+                "tags": [
+                    "companies"
+                ]
+            },
+            "parameters": [
+                {
+                    "name": "token",
+                    "in": "path",
+                    "required": true,
+                    "type": "string"
+                }
+            ]
+        },
         "/products/": {
             "get": {
                 "operationId": "products_list",
@@ -176,84 +300,6 @@ GOOGLE_APPLICATION_CREDENTIALS not set or file not found
                 ]
             },
             "parameters": []
-        },
-        "/users/company/": {
-            "get": {
-                "operationId": "users_company_list",
-                "description": "",
-                "parameters": [],
-                "responses": {
-                    "200": {
-                        "description": ""
-                    }
-                },
-                "tags": [
-                    "users"
-                ]
-            },
-            "post": {
-                "operationId": "users_company_create",
-                "description": "",
-                "parameters": [],
-                "responses": {
-                    "201": {
-                        "description": ""
-                    }
-                },
-                "tags": [
-                    "users"
-                ]
-            },
-            "parameters": []
-        },
-        "/users/company/{id}/": {
-            "get": {
-                "operationId": "users_company_read",
-                "description": "",
-                "parameters": [],
-                "responses": {
-                    "200": {
-                        "description": ""
-                    }
-                },
-                "tags": [
-                    "users"
-                ]
-            },
-            "put": {
-                "operationId": "users_company_update",
-                "description": "",
-                "parameters": [],
-                "responses": {
-                    "200": {
-                        "description": ""
-                    }
-                },
-                "tags": [
-                    "users"
-                ]
-            },
-            "delete": {
-                "operationId": "users_company_delete",
-                "description": "",
-                "parameters": [],
-                "responses": {
-                    "204": {
-                        "description": ""
-                    }
-                },
-                "tags": [
-                    "users"
-                ]
-            },
-            "parameters": [
-                {
-                    "name": "id",
-                    "in": "path",
-                    "required": true,
-                    "type": "string"
-                }
-            ]
         }
     },
     "definitions": {}
