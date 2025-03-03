@@ -1,28 +1,32 @@
-import uuid
-from rest_framework import status
+from django.db.models import Q
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
+
+from users.serializers import UserSerializer
+from .permissions import IsCompanyMemberOrOwner, IsCompanyOwner, IsCompanyAdmin
+from .models import Company, Invitation
+from .serializers import CompanySerializer
 from django.utils import timezone
 from datetime import timedelta
-from companies.models import Company, Invitation
-from companies.serializers import CompanySerializer
+import uuid
 
 
 class CompanyView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        companies = Company.objects.all()
+        companies = Company.objects.filter(
+            Q(members=request.user) | Q(owner=request.user)
+        ).distinct()
         serializer = CompanySerializer(companies, many=True)
         return Response(serializer.data)
 
     def post(self, request):
         if request.user.role != "owner":
-            return Response(
-                {"error": "Only owners can create companies"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+            raise PermissionDenied("회사를 생성할 권한이 없습니다.")
         serializer = CompanySerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(owner=request.user)
@@ -31,11 +35,13 @@ class CompanyView(APIView):
 
 
 class CompanyDetailView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMemberOrOwner]
 
     def get_object(self, pk):
         try:
-            return Company.objects.get(pk=pk)
+            obj = Company.objects.get(pk=pk)
+            self.check_object_permissions(self.request, obj)
+            return obj
         except Company.DoesNotExist:
             return None
 
@@ -50,11 +56,10 @@ class CompanyDetailView(APIView):
         company = self.get_object(pk)
         if not company:
             return Response(status=status.HTTP_404_NOT_FOUND)
-        if request.user != company.owner and request.user.role != "admin":
-            return Response(
-                {"error": "You don't have permission to update this company"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        if not IsCompanyOwner().has_object_permission(
+            request, self, company
+        ) and not IsCompanyAdmin().has_object_permission(request, self, company):
+            raise PermissionDenied("회사 정보를 수정할 권한이 없습니다.")
         serializer = CompanySerializer(company, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -65,17 +70,32 @@ class CompanyDetailView(APIView):
         company = self.get_object(pk)
         if not company:
             return Response(status=status.HTTP_404_NOT_FOUND)
-        if request.user != company.owner and request.user.role != "admin":
-            return Response(
-                {"error": "You don't have permission to delete this company"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        if not IsCompanyOwner().has_object_permission(request, self, company):
+            raise PermissionDenied("회사를 삭제할 권한이 없습니다.")
         company.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class CompanyMembersListView(APIView):
+    permission_classes = [IsAuthenticated, IsCompanyMemberOrOwner]
+
+    def get(self, request, company_id):
+        try:
+            company = Company.objects.get(id=company_id)
+        except Company.DoesNotExist:
+            return Response(
+                {"error": "회사를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        self.check_object_permissions(request, company)
+
+        members = company.members.all()
+        serializer = UserSerializer(members, many=True)
+        return Response(serializer.data)
+
+
 class InvitationCreateView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyOwner]
 
     def post(self, request, company_id):
         try:
@@ -85,10 +105,7 @@ class InvitationCreateView(APIView):
                 {"error": "회사를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        if request.user != company.owner:
-            return Response(
-                {"error": "권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN
-            )
+        self.check_object_permissions(request, company)
 
         email = request.data.get("email")
         if not email:
@@ -110,12 +127,15 @@ class InvitationCreateView(APIView):
 class InvitationAcceptView(APIView):
     def get(self, request, token):
         try:
-            invitation = Invitation.objects.get(token=token)
+            invitation = Invitation.objects.get(
+                token=token, expiration_date__gt=timezone.now(), is_used=False
+            )
         except Invitation.DoesNotExist:
             return Response(
                 {"error": "유효하지 않거나 만료된 초대입니다."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
         user = request.user if request.user.is_authenticated else None
         if not user:
             return Response({"redirect": "/signup/?invitation_token=" + token})
