@@ -55,6 +55,21 @@ paths:
       in: path
       required: true
       type: string
+  /companies/{company_id}/members/:
+    get:
+      operationId: companies_members_list
+      description: ''
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      tags:
+      - companies
+    parameters:
+    - name: company_id
+      in: path
+      required: true
+      type: string
   /companies/{id}/:
     get:
       operationId: companies_read
