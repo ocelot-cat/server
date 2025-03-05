@@ -12,4 +12,5 @@ class ProductSerializer(serializers.ModelSerializer):
             "piece_quantity",
             "box_quantity",
             "container_quantity",
+            "updated_at",
         ]
