@@ -2,11 +2,12 @@ from uuid import uuid4
 from django.db import models, transaction
 from django.db.models import F
 from typing import List, Dict
+from core.models import CommonModel
 from users.models import User
 from django.urls import reverse
 
 
-class Product(models.Model):
+class Product(CommonModel):
     name = models.CharField(max_length=100)
     uuid = models.UUIDField(default=uuid4, editable=False, unique=True)
     category = models.CharField(max_length=50)
