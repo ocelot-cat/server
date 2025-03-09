@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Company, Invitation
+from .models import Company, Invitation, CompanyMembership
 
 
 @admin.register(Company)
@@ -33,3 +33,15 @@ class InvitationAdmin(admin.ModelAdmin):
         if obj:
             return self.readonly_fields + ("company", "email")
         return self.readonly_fields
+
+
+@admin.register(CompanyMembership)
+class CompanyMembershipAdmin(admin.ModelAdmin):
+    list_display = ("company", "user", "role")
+    list_filter = ("company", "role")
+    search_fields = ("company__name", "user__username")
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ("company", "user")
+        return ()

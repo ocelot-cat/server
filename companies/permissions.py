@@ -1,10 +1,12 @@
 from rest_framework.permissions import BasePermission
 
+from companies.models import CompanyMembership
 
-class IsCompanyMemberOrOwner(BasePermission):
+
+class IsCompanyMember(BasePermission):
     def has_object_permission(self, request, view, obj):
         return (
-            request.user == obj.owner or obj.members.filter(id=request.user.id).exists()
+            obj.members.filter(id=request.user.id).exists() or request.user == obj.owner
         )
 
 
@@ -13,8 +15,9 @@ class IsCompanyOwner(BasePermission):
         return request.user == obj.owner
 
 
-class IsCompanyAdmin(BasePermission):
+class IsCompanyAdminOrOwner(BasePermission):
     def has_object_permission(self, request, view, obj):
-        return request.user.role == "admin" and (
-            request.user == obj.owner or obj.members.filter(id=request.user.id).exists()
-        )
+        membership = CompanyMembership.objects.filter(
+            company=obj, user=request.user
+        ).first()
+        return membership and (membership.role == "owner" or membership.role == "admin")

@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     CompanyMembersListView,
+    CompanyPromoteMembersView,
     InvitationCreateView,
     InvitationAcceptView,
     CompanyView,
@@ -15,6 +16,11 @@ urlpatterns = [
         "<int:company_id>/members/",
         CompanyMembersListView.as_view(),
         name="company_members_list",
+    ),
+    path(
+        "<int:company_id>/members/<int:user_id>/promote/",
+        CompanyPromoteMembersView.as_view(),
+        name="company_members_promote",
     ),
     path(
         "<int:company_id>/invite/",

@@ -4,10 +4,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
-
-from users.serializers import UserSerializer
-from .permissions import IsCompanyMemberOrOwner, IsCompanyOwner, IsCompanyAdmin
-from .models import Company, Invitation
+from .permissions import (
+    IsCompanyAdminOrOwner,
+    IsCompanyOwner,
+)
+from .models import Company, CompanyMembership, Invitation
 from .serializers import CompanySerializer
 from django.utils import timezone
 from datetime import timedelta
@@ -15,6 +16,11 @@ import uuid
 
 
 class CompanyView(APIView):
+    """
+    기능 : 회사를 만들 수 있습니다.
+    허용 : 누구나
+    """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -25,17 +31,23 @@ class CompanyView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        if request.user.role != "owner":
-            raise PermissionDenied("회사를 생성할 권한이 없습니다.")
         serializer = CompanySerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(owner=request.user)
+            company = serializer.save(owner=request.user)
+            CompanyMembership.objects.create(
+                company=company, user=request.user, role="owner"
+            )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class CompanyDetailView(APIView):
-    permission_classes = [IsAuthenticated, IsCompanyMemberOrOwner]
+    """
+    기능 : 회사의 상세 정보를 조회/수정/삭제합니다.
+    허용 : 회사 오너만
+    """
+
+    permission_classes = [IsAuthenticated, IsCompanyOwner]
 
     def get_object(self, pk):
         try:
@@ -56,10 +68,7 @@ class CompanyDetailView(APIView):
         company = self.get_object(pk)
         if not company:
             return Response(status=status.HTTP_404_NOT_FOUND)
-        if not IsCompanyOwner().has_object_permission(
-            request, self, company
-        ) and not IsCompanyAdmin().has_object_permission(request, self, company):
-            raise PermissionDenied("회사 정보를 수정할 권한이 없습니다.")
+
         serializer = CompanySerializer(company, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -70,14 +79,18 @@ class CompanyDetailView(APIView):
         company = self.get_object(pk)
         if not company:
             return Response(status=status.HTTP_404_NOT_FOUND)
-        if not IsCompanyOwner().has_object_permission(request, self, company):
-            raise PermissionDenied("회사를 삭제할 권한이 없습니다.")
+
         company.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CompanyMembersListView(APIView):
-    permission_classes = [IsAuthenticated, IsCompanyMemberOrOwner]
+    """
+    기능 : 회사 멤버를 볼 수 있습니다.
+    허용 : 관리자와 오너
+    """
+
+    permission_classes = [IsAuthenticated, IsCompanyAdminOrOwner]
 
     def get(self, request, company_id):
         try:
@@ -89,12 +102,64 @@ class CompanyMembersListView(APIView):
 
         self.check_object_permissions(request, company)
 
-        members = company.members.all()
-        serializer = UserSerializer(members, many=True)
-        return Response(serializer.data)
+        memberships = CompanyMembership.objects.filter(company=company).select_related(
+            "user"
+        )
+
+        data = [
+            {"user": membership.user.username, "role": membership.role}
+            for membership in memberships
+        ]
+
+        return Response(data)
+
+
+class CompanyPromoteMembersView(APIView):
+    """
+    기능 : 회사 멤버를 승격시킬 수 있습니다.
+    허용 : 관리자와 오너
+    """
+
+    permission_classes = [IsAuthenticated, IsCompanyAdminOrOwner]
+
+    def patch(self, request, company_id, user_id):
+        try:
+            company = Company.objects.get(id=company_id)
+        except Company.DoesNotExist:
+            return Response(
+                {"error": "회사를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        self.check_object_permissions(request, company)
+
+        try:
+            membership = CompanyMembership.objects.get(company=company, user_id=user_id)
+        except CompanyMembership.DoesNotExist:
+            return Response(
+                {"error": "사용자가 회사의 멤버가 아닙니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if membership.role == "admin":
+            return Response(
+                {"error": "이미 관리자입니다."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        membership.role = "admin"
+        membership.save()
+
+        return Response(
+            {"message": f"{membership.user.username}님이 관리자로 승격되었습니다."},
+            status=status.HTTP_200_OK,
+        )
 
 
 class InvitationCreateView(APIView):
+    """
+    기능 : 초대 링크를 생성할 수 있습니다.
+    허용 : 회사 오너
+    """
+
     permission_classes = [IsAuthenticated, IsCompanyOwner]
 
     def post(self, request, company_id):
@@ -116,7 +181,10 @@ class InvitationCreateView(APIView):
         token = str(uuid.uuid4())
         expiration_date = timezone.now() + timedelta(days=7)
         invitation = Invitation.objects.create(
-            company=company, email=email, token=token, expiration_date=expiration_date
+            company=company,
+            email=email,
+            token=token,
+            expiration_date=expiration_date,
         )
 
         # 이메일 발송 로직
@@ -125,10 +193,17 @@ class InvitationCreateView(APIView):
 
 
 class InvitationAcceptView(APIView):
+    """
+    기능 : 초대받은 링크를 수락할 수 있습니다.
+    허용 : 누구나
+    """
+
     def get(self, request, token):
         try:
             invitation = Invitation.objects.get(
-                token=token, expiration_date__gt=timezone.now(), is_used=False
+                token=token,
+                expiration_date__gt=timezone.now(),
+                is_used=False,
             )
         except Invitation.DoesNotExist:
             return Response(
@@ -140,7 +215,8 @@ class InvitationAcceptView(APIView):
         if not user:
             return Response({"redirect": "/signup/?invitation_token=" + token})
 
-        invitation.company.members.add(user)
+        CompanyMembership.objects.create(company=invitation.company, user=user)
+
         invitation.is_used = True
         invitation.is_accepted = True
         invitation.save()
