@@ -1,7 +1,7 @@
-import uuid
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
+import uuid
 
 from users.models import User
 
@@ -32,9 +32,22 @@ class CompanyMembership(models.Model):
         ),
         default="employee",
     )
+    department = models.ForeignKey(
+        "Department", on_delete=models.CASCADE, null=True, blank=True
+    )
 
     class Meta:
         unique_together = ("company", "user")
+
+
+class Department(models.Model):
+    name = models.CharField(max_length=100)
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, related_name="departments"
+    )
+
+    def __str__(self):
+        return f"{self.name} ({self.company.name})"
 
 
 class Invitation(models.Model):
