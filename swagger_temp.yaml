@@ -23,7 +23,9 @@ paths:
   /companies/:
     get:
       operationId: companies_list
-      description: ''
+      description: |-
+        기능 : 회사를 만들 수 있습니다.
+        허용 : 누구나
       parameters: []
       responses:
         '200':
@@ -32,7 +34,9 @@ paths:
       - companies
     post:
       operationId: companies_create
-      description: ''
+      description: |-
+        기능 : 회사를 만들 수 있습니다.
+        허용 : 누구나
       parameters: []
       responses:
         '201':
@@ -43,7 +47,9 @@ paths:
   /companies/{company_id}/invite/:
     post:
       operationId: companies_invite_create
-      description: ''
+      description: |-
+        기능 : 초대 링크를 생성할 수 있습니다.
+        허용 : 회사 오너
       parameters: []
       responses:
         '201':
@@ -58,7 +64,9 @@ paths:
   /companies/{company_id}/members/:
     get:
       operationId: companies_members_list
-      description: ''
+      description: |-
+        기능 : 회사 멤버를 볼 수 있습니다.
+        허용 : 관리자와 오너
       parameters: []
       responses:
         '200':
@@ -70,10 +78,33 @@ paths:
       in: path
       required: true
       type: string
+  /companies/{company_id}/members/{user_id}/promote/:
+    patch:
+      operationId: companies_members_promote_partial_update
+      description: |-
+        기능 : 회사 멤버를 승격시킬 수 있습니다.
+        허용 : 관리자와 오너
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      tags:
+      - companies
+    parameters:
+    - name: company_id
+      in: path
+      required: true
+      type: string
+    - name: user_id
+      in: path
+      required: true
+      type: string
   /companies/{id}/:
     get:
       operationId: companies_read
-      description: ''
+      description: |-
+        기능 : 회사의 상세 정보를 조회/수정/삭제합니다.
+        허용 : 회사 오너만
       parameters: []
       responses:
         '200':
@@ -82,7 +113,9 @@ paths:
       - companies
     put:
       operationId: companies_update
-      description: ''
+      description: |-
+        기능 : 회사의 상세 정보를 조회/수정/삭제합니다.
+        허용 : 회사 오너만
       parameters: []
       responses:
         '200':
@@ -91,7 +124,9 @@ paths:
       - companies
     delete:
       operationId: companies_delete
-      description: ''
+      description: |-
+        기능 : 회사의 상세 정보를 조회/수정/삭제합니다.
+        허용 : 회사 오너만
       parameters: []
       responses:
         '204':
@@ -106,7 +141,9 @@ paths:
   /companies/{token}/accept/:
     get:
       operationId: companies_accept_list
-      description: ''
+      description: |-
+        기능 : 초대받은 링크를 수락할 수 있습니다.
+        허용 : 누구나
       parameters: []
       responses:
         '200':

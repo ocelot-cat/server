@@ -15,7 +15,26 @@ class Company(models.Model):
     owner = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="owned_companies"
     )
-    members = models.ManyToManyField(User, related_name="companies")
+    members = models.ManyToManyField(
+        User, through="CompanyMembership", related_name="companies"
+    )
+
+
+class CompanyMembership(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    role = models.CharField(
+        max_length=10,
+        choices=(
+            ("owner", "사장"),
+            ("admin", "관리자"),
+            ("employee", "일반직원"),
+        ),
+        default="employee",
+    )
+
+    class Meta:
+        unique_together = ("company", "user")
 
 
 class Invitation(models.Model):
