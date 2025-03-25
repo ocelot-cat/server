@@ -2,7 +2,6 @@ from django.db import models
 from django.utils import timezone
 from datetime import timedelta
 import uuid
-
 from users.models import User
 
 
@@ -18,6 +17,9 @@ class Company(models.Model):
     members = models.ManyToManyField(
         User, through="CompanyMembership", related_name="companies"
     )
+
+    def __str__(self):
+        return self.name
 
 
 class CompanyMembership(models.Model):
@@ -37,9 +39,16 @@ class CompanyMembership(models.Model):
     )
 
     class Meta:
+        indexes = [
+            models.Index(fields=["role"]),
+        ]
         unique_together = ("company", "user")
 
+    def __str__(self):
+        return f"{self.user.username} - {self.company.name} ({self.get_role_display()})"
 
+
+# 부서 모델
 class Department(models.Model):
     name = models.CharField(max_length=100)
     company = models.ForeignKey(
@@ -50,6 +59,10 @@ class Department(models.Model):
         return f"{self.name} ({self.company.name})"
 
 
+def get_expiration_date():
+    return timezone.now() + timedelta(days=7)
+
+
 class Invitation(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
     email = models.EmailField()
@@ -57,3 +70,12 @@ class Invitation(models.Model):
     expiration_date = models.DateTimeField(default=get_expiration_date)
     is_accepted = models.BooleanField(default=False)
     is_used = models.BooleanField(default=False)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["token"]),
+            models.Index(fields=["expiration_date"]),
+        ]
+
+    def __str__(self):
+        return f"Invitation to {self.company.name} for {self.email}"

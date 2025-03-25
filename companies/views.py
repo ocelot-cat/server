@@ -9,7 +9,7 @@ from .permissions import (
     IsCompanyOwner,
 )
 from .models import Company, CompanyMembership, Invitation
-from .serializers import CompanySerializer
+from .serializers import CompanySerializer, DepartmentSerializer
 from django.utils import timezone
 from datetime import timedelta
 import uuid

@@ -1,6 +1,7 @@
 from uuid import uuid4
 from django.db import models, transaction
-from django.db.models import F
+from django.db.models import Case, When, F, IntegerField
+from django.core.validators import MinValueValidator
 from typing import List, Dict
 from core.models import CommonModel
 from users.models import User
@@ -11,9 +12,18 @@ class Product(CommonModel):
     name = models.CharField(max_length=100)
     uuid = models.UUIDField(default=uuid4, editable=False, unique=True)
     category = models.CharField(max_length=50)
-    piece_quantity = models.IntegerField(default=0)
-    box_quantity = models.IntegerField(default=0)
-    container_quantity = models.IntegerField(default=0)
+    piece_quantity = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    box_quantity = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    container_quantity = models.IntegerField(
+        default=0, validators=[MinValueValidator(0)]
+    )
+    version = models.IntegerField(default=0)  # 낙관적 락용
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["uuid"]),
+            models.Index(fields=["category"]),
+        ]
 
     def __str__(self):
         return self.name
@@ -25,6 +35,7 @@ class Product(CommonModel):
         return f"http://127.0.0.1:8000/api/v1/products/{self.uuid}"
 
 
+# 제품 기록 모델
 class ProductRecord(models.Model):
     RECORD_TYPE_CHOICES = (
         ("in", "입고"),
@@ -34,11 +45,19 @@ class ProductRecord(models.Model):
         Product, on_delete=models.CASCADE, related_name="records"
     )
     record_type = models.CharField(max_length=3, choices=RECORD_TYPE_CHOICES)
-    piece_quantity = models.IntegerField(default=0)
-    box_quantity = models.IntegerField(default=0)
-    container_quantity = models.IntegerField(default=0)
+    piece_quantity = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    box_quantity = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    container_quantity = models.IntegerField(
+        default=0, validators=[MinValueValidator(0)]
+    )
     recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     record_date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["record_date"]),
+            models.Index(fields=["record_type"]),
+        ]
 
     def save(self, *args, **kwargs):
         is_new = self._state.adding
@@ -46,22 +65,24 @@ class ProductRecord(models.Model):
             super().save(*args, **kwargs)
             if is_new:
                 multiplier = 1 if self.record_type == "in" else -1
-                Product.objects.filter(id=self.product.id).update(
+                Product.objects.select_for_update().filter(id=self.product.id).update(
                     piece_quantity=F("piece_quantity")
                     + multiplier * self.piece_quantity,
                     box_quantity=F("box_quantity") + multiplier * self.box_quantity,
                     container_quantity=F("container_quantity")
                     + multiplier * self.container_quantity,
+                    version=F("version") + 1,
                 )
 
     def delete(self, *args, **kwargs):
         with transaction.atomic():
             multiplier = -1 if self.record_type == "in" else 1
-            Product.objects.filter(id=self.product.id).update(
+            Product.objects.select_for_update().filter(id=self.product.id).update(
                 piece_quantity=F("piece_quantity") + multiplier * self.piece_quantity,
                 box_quantity=F("box_quantity") + multiplier * self.box_quantity,
                 container_quantity=F("container_quantity")
                 + multiplier * self.container_quantity,
+                version=F("version") + 1,
             )
             super().delete(*args, **kwargs)
 
@@ -69,54 +90,81 @@ class ProductRecord(models.Model):
         return f"{self.get_record_type_display()} - {self.product.name}"
 
 
+# 제품 기록 매니저
 class ProductRecordManager:
     @staticmethod
     @transaction.atomic
     def bulk_create_records(records_data: List[Dict]) -> None:
         product_records = []
-        product_updates = {}
+        product_ids = set()
 
+        # 기록 생성 준비
         for data in records_data:
             product = data["product"]
-            record_type = data["record_type"]
-            piece_qty = data["piece_quantity"]
-            box_qty = data["box_quantity"]
-            container_qty = data["container_quantity"]
-
+            product_ids.add(product.id)
             product_records.append(
                 ProductRecord(
                     product=product,
-                    record_type=record_type,
-                    piece_quantity=piece_qty,
-                    box_quantity=box_qty,
-                    container_quantity=container_qty,
+                    record_type=data["record_type"],
+                    piece_quantity=data["piece_quantity"],
+                    box_quantity=data["box_quantity"],
+                    container_quantity=data["container_quantity"],
                     recorded_by=data["user"],
                     note=data.get("note", ""),
                 )
             )
 
-            if product.id not in product_updates:
-                product_updates[product.id] = {
-                    "piece_quantity": 0,
-                    "box_quantity": 0,
-                    "container_quantity": 0,
-                }
-
-            multiplier = 1 if record_type == "in" else -1
-            product_updates[product.id]["piece_quantity"] += multiplier * piece_qty
-            product_updates[product.id]["box_quantity"] += multiplier * box_qty
-            product_updates[product.id]["container_quantity"] += (
-                multiplier * container_qty
-            )
-
         # 벌크 생성
         ProductRecord.objects.bulk_create(product_records)
 
-        # 벌크 업데이트
-        for product_id, updates in product_updates.items():
-            Product.objects.filter(id=product_id).update(
-                piece_quantity=F("piece_quantity") + updates["piece_quantity"],
-                box_quantity=F("box_quantity") + updates["box_quantity"],
-                container_quantity=F("container_quantity")
-                + updates["container_quantity"],
-            )
+        # 단일 쿼리로 수량 업데이트
+        Product.objects.select_for_update().filter(id__in=product_ids).update(
+            piece_quantity=F("piece_quantity")
+            + Case(
+                *[
+                    When(
+                        id=pid,
+                        then=sum(
+                            r["piece_quantity"]
+                            * (1 if r["record_type"] == "in" else -1)
+                            for r in records_data
+                            if r["product"].id == pid
+                        ),
+                    )
+                    for pid in product_ids
+                ],
+                output_field=IntegerField(),
+            ),
+            box_quantity=F("box_quantity")
+            + Case(
+                *[
+                    When(
+                        id=pid,
+                        then=sum(
+                            r["box_quantity"] * (1 if r["record_type"] == "in" else -1)
+                            for r in records_data
+                            if r["product"].id == pid
+                        ),
+                    )
+                    for pid in product_ids
+                ],
+                output_field=IntegerField(),
+            ),
+            container_quantity=F("container_quantity")
+            + Case(
+                *[
+                    When(
+                        id=pid,
+                        then=sum(
+                            r["container_quantity"]
+                            * (1 if r["record_type"] == "in" else -1)
+                            for r in records_data
+                            if r["product"].id == pid
+                        ),
+                    )
+                    for pid in product_ids
+                ],
+                output_field=IntegerField(),
+            ),
+            version=F("version") + 1,
+        )
