@@ -31,7 +31,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-1ini7kl%*nsg)d33hxb3pk&tjq92zw5%=ofqg@*gpfocno^v(s"
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
@@ -70,10 +69,11 @@ CUSTOM_APPS = [
     "users.apps.UsersConfig",
     "products.apps.ProductsConfig",
     "companies.apps.CompaniesConfig",
+    "notifications.apps.NotificationsConfig",
 ]
 
 
-THIRD_PARTY_APPS = ["corsheaders", "rest_framework", "drf_yasg", "storages"]
+THIRD_PARTY_APPS = ["corsheaders", "rest_framework", "drf_yasg", "storages", "celery"]
 
 INSTALLED_APPS = SYSTEM_APPS + THIRD_PARTY_APPS + CUSTOM_APPS
 
@@ -218,3 +218,10 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Celery settings
+CELERY_BROKER_URL = "redis://localhost:6379/0"
+CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
