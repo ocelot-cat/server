@@ -3,6 +3,7 @@ from django.db import models, transaction
 from django.db.models import Case, When, F, IntegerField
 from django.core.validators import MinValueValidator
 from typing import List, Dict
+from companies.models import Company
 from core.models import CommonModel
 from users.models import User
 from django.urls import reverse
@@ -17,7 +18,9 @@ class Product(CommonModel):
     container_quantity = models.IntegerField(
         default=0, validators=[MinValueValidator(0)]
     )
-    version = models.IntegerField(default=0)  # 낙관적 락용
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, related_name="products"
+    )
 
     class Meta:
         indexes = [
@@ -35,7 +38,6 @@ class Product(CommonModel):
         return f"http://127.0.0.1:8000/api/v1/products/{self.uuid}"
 
 
-# 제품 기록 모델
 class ProductRecord(models.Model):
     RECORD_TYPE_CHOICES = (
         ("in", "입고"),
@@ -98,7 +100,6 @@ class ProductRecordManager:
         product_records = []
         product_ids = set()
 
-        # 기록 생성 준비
         for data in records_data:
             product = data["product"]
             product_ids.add(product.id)
@@ -114,10 +115,8 @@ class ProductRecordManager:
                 )
             )
 
-        # 벌크 생성
         ProductRecord.objects.bulk_create(product_records)
 
-        # 단일 쿼리로 수량 업데이트
         Product.objects.select_for_update().filter(id__in=product_ids).update(
             piece_quantity=F("piece_quantity")
             + Case(

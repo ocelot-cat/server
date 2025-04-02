@@ -3,12 +3,11 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import PermissionDenied
 from .permissions import (
     IsCompanyAdminOrOwner,
     IsCompanyOwner,
 )
-from .models import Company, CompanyMembership, Invitation
+from .models import Company, CompanyMembership, Department, Invitation
 from .serializers import CompanySerializer, DepartmentSerializer
 from django.utils import timezone
 from datetime import timedelta
