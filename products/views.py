@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view
 from .models import Product
-from .serializers import ProductSerializer
+from .serializers import ProductRecordSerializer, ProductSerializer
 
 
 class ProductView(APIView):
@@ -45,6 +45,20 @@ class ProductDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class ProductRecordCreateView(APIView):
+    def post(self, request, pk, *args, **kwargs):
+        product = get_object_or_404(Product, pk=pk)
+        data = request.data.copy()
+        data["product"] = product.id
+        data["recorded_by"] = request.user.id
+
+        serializer = ProductRecordSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 def generate_qr_code(url):
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
     qr.add_data(url)
@@ -62,3 +76,22 @@ def get_product_qr(request, pk):
     product = get_object_or_404(Product, pk=pk)
     qr_image = generate_qr_code(str(product.pk))
     return Response({"qr_code": qr_image})
+
+
+class ProductRecordCreateView(APIView):
+    def post(self, request, pk, *args, **kwargs):
+        # 해당 Product가 존재하는지 확인
+        product = get_object_or_404(Product, pk=pk)
+
+        # 요청 데이터에 product와 recorded_by 추가
+        data = request.data.copy()
+        data["product"] = product.id
+        data["recorded_by"] = (
+            request.user.id
+        )  # 인증된 사용자를 기록자로 설정 (인증 필요)
+
+        serializer = ProductRecordSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()  # save()에서 expiration_date와 재고가 자동 업데이트됨
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

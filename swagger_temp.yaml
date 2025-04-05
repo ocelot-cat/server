@@ -305,6 +305,21 @@ paths:
       in: path
       required: true
       type: string
+  /products/{id}/records/:
+    post:
+      operationId: products_records_create
+      description: ''
+      parameters: []
+      responses:
+        '201':
+          description: ''
+      tags:
+      - products
+    parameters:
+    - name: id
+      in: path
+      required: true
+      type: string
   /token/:
     post:
       operationId: token_create
