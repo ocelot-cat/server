@@ -1,8 +1,6 @@
 from uuid import uuid4
 from django.db import models, transaction
-from django.db.models import Case, When, F, IntegerField
 from django.core.validators import MinValueValidator
-from typing import List, Dict
 from companies.models import Company
 from core.models import CommonModel
 from users.models import User
@@ -13,13 +11,14 @@ class Product(CommonModel):
     name = models.CharField(max_length=100)
     uuid = models.UUIDField(default=uuid4, editable=False, unique=True)
     category = models.CharField(max_length=50)
-    piece_quantity = models.IntegerField(default=0, validators=[MinValueValidator(0)])
-    box_quantity = models.IntegerField(default=0, validators=[MinValueValidator(0)])
-    container_quantity = models.IntegerField(
-        default=0, validators=[MinValueValidator(0)]
-    )
     company = models.ForeignKey(
         Company, on_delete=models.CASCADE, related_name="products"
+    )
+    storage_months = models.IntegerField(
+        default=6, validators=[MinValueValidator(1)], help_text="보관 가능 개월 수"
+    )
+    pieces_per_box = models.IntegerField(
+        default=20, validators=[MinValueValidator(1)], help_text="한 박스당 개수"
     )
 
     class Meta:
@@ -37,6 +36,21 @@ class Product(CommonModel):
     def get_qr_code_url(self):
         return f"http://127.0.0.1:8000/api/v1/products/{self.uuid}"
 
+    def get_total_stock(self):
+        """현재 총 재고 계산"""
+        records = self.records.filter(record_type="in")
+        total_pieces = sum(
+            (r.box_quantity * self.pieces_per_box)
+            + r.piece_quantity
+            - r.consumed_quantity
+            for r in records
+        )
+        return {
+            "box_quantity": total_pieces // self.pieces_per_box,
+            "piece_quantity": total_pieces % self.pieces_per_box,
+            "total_pieces": total_pieces,
+        }
+
 
 class ProductRecord(models.Model):
     RECORD_TYPE_CHOICES = (
@@ -49,121 +63,60 @@ class ProductRecord(models.Model):
     record_type = models.CharField(max_length=3, choices=RECORD_TYPE_CHOICES)
     piece_quantity = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     box_quantity = models.IntegerField(default=0, validators=[MinValueValidator(0)])
-    container_quantity = models.IntegerField(
+    consumed_quantity = models.IntegerField(
         default=0, validators=[MinValueValidator(0)]
-    )
+    )  # 소진된 수량
     recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     record_date = models.DateTimeField(auto_now_add=True)
+    expiration_date = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         indexes = [
             models.Index(fields=["record_date"]),
             models.Index(fields=["record_type"]),
+            models.Index(fields=["expiration_date"]),
         ]
 
     def save(self, *args, **kwargs):
         is_new = self._state.adding
         with transaction.atomic():
             super().save(*args, **kwargs)
-            if is_new:
-                multiplier = 1 if self.record_type == "in" else -1
-                Product.objects.select_for_update().filter(id=self.product.id).update(
-                    piece_quantity=F("piece_quantity")
-                    + multiplier * self.piece_quantity,
-                    box_quantity=F("box_quantity") + multiplier * self.box_quantity,
-                    container_quantity=F("container_quantity")
-                    + multiplier * self.container_quantity,
-                    version=F("version") + 1,
-                )
+            if is_new and self.record_type == "out":
+                self._consume_stock()
 
-    def delete(self, *args, **kwargs):
-        with transaction.atomic():
-            multiplier = -1 if self.record_type == "in" else 1
-            Product.objects.select_for_update().filter(id=self.product.id).update(
-                piece_quantity=F("piece_quantity") + multiplier * self.piece_quantity,
-                box_quantity=F("box_quantity") + multiplier * self.box_quantity,
-                container_quantity=F("container_quantity")
-                + multiplier * self.container_quantity,
-                version=F("version") + 1,
+    def _consume_stock(self):
+        """출고 시 FIFO로 재고 소진"""
+        total_out_pieces = (
+            self.box_quantity * self.product.pieces_per_box
+        ) + self.piece_quantity
+        if total_out_pieces <= 0:
+            return
+
+        # 입고 기록을 오래된 순으로 정렬
+        in_records = self.product.records.filter(record_type="in").order_by(
+            "record_date"
+        )
+
+        remaining_out = total_out_pieces
+        for in_record in in_records:
+            available_pieces = (
+                (in_record.box_quantity * self.product.pieces_per_box)
+                + in_record.piece_quantity
+                - in_record.consumed_quantity
             )
-            super().delete(*args, **kwargs)
+            if available_pieces <= 0:
+                continue
+
+            consumed = min(available_pieces, remaining_out)
+            in_record.consumed_quantity += consumed
+            in_record.save(update_fields=["consumed_quantity"])
+            remaining_out -= consumed
+
+            if remaining_out <= 0:
+                break
+
+        if remaining_out > 0:
+            raise ValueError("소진할 재고가 부족합니다.")
 
     def __str__(self):
         return f"{self.get_record_type_display()} - {self.product.name}"
-
-
-# 제품 기록 매니저
-class ProductRecordManager:
-    @staticmethod
-    @transaction.atomic
-    def bulk_create_records(records_data: List[Dict]) -> None:
-        product_records = []
-        product_ids = set()
-
-        for data in records_data:
-            product = data["product"]
-            product_ids.add(product.id)
-            product_records.append(
-                ProductRecord(
-                    product=product,
-                    record_type=data["record_type"],
-                    piece_quantity=data["piece_quantity"],
-                    box_quantity=data["box_quantity"],
-                    container_quantity=data["container_quantity"],
-                    recorded_by=data["user"],
-                    note=data.get("note", ""),
-                )
-            )
-
-        ProductRecord.objects.bulk_create(product_records)
-
-        Product.objects.select_for_update().filter(id__in=product_ids).update(
-            piece_quantity=F("piece_quantity")
-            + Case(
-                *[
-                    When(
-                        id=pid,
-                        then=sum(
-                            r["piece_quantity"]
-                            * (1 if r["record_type"] == "in" else -1)
-                            for r in records_data
-                            if r["product"].id == pid
-                        ),
-                    )
-                    for pid in product_ids
-                ],
-                output_field=IntegerField(),
-            ),
-            box_quantity=F("box_quantity")
-            + Case(
-                *[
-                    When(
-                        id=pid,
-                        then=sum(
-                            r["box_quantity"] * (1 if r["record_type"] == "in" else -1)
-                            for r in records_data
-                            if r["product"].id == pid
-                        ),
-                    )
-                    for pid in product_ids
-                ],
-                output_field=IntegerField(),
-            ),
-            container_quantity=F("container_quantity")
-            + Case(
-                *[
-                    When(
-                        id=pid,
-                        then=sum(
-                            r["container_quantity"]
-                            * (1 if r["record_type"] == "in" else -1)
-                            for r in records_data
-                            if r["product"].id == pid
-                        ),
-                    )
-                    for pid in product_ids
-                ],
-                output_field=IntegerField(),
-            ),
-            version=F("version") + 1,
-        )

@@ -14,9 +14,6 @@ class ProductAdmin(admin.ModelAdmin):
         "name",
         "uuid",
         "category",
-        "piece_quantity",
-        "box_quantity",
-        "container_quantity",
     )
     search_fields = ("name", "category")
     list_filter = ("category",)
@@ -29,8 +26,6 @@ class ProductRecordAdmin(admin.ModelAdmin):
         "product",
         "record_type",
         "piece_quantity",
-        "box_quantity",
-        "container_quantity",
         "recorded_by",
         "record_date",
     )
