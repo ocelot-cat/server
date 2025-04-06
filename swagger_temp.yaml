@@ -211,32 +211,6 @@ paths:
       in: path
       required: true
       type: string
-  /notifications/:
-    get:
-      operationId: notifications_list
-      description: ''
-      parameters: []
-      responses:
-        '200':
-          description: ''
-      tags:
-      - notifications
-    parameters: []
-  /notifications/{notification_id}/mark-read/:
-    post:
-      operationId: notifications_mark-read_create
-      description: ''
-      parameters: []
-      responses:
-        '201':
-          description: ''
-      tags:
-      - notifications
-    parameters:
-    - name: notification_id
-      in: path
-      required: true
-      type: string
   /products/:
     get:
       operationId: products_list

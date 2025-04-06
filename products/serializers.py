@@ -51,10 +51,12 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "uuid",
             "category",
-            "updated_at",
-            "current_stock",  # 추가
-            # "records",  # 히스토리 내역
+            "company",
+            "storage_months",
+            "pieces_per_box",
+            "current_stock",  # 필요하면 추가
         ]
 
     def get_current_stock(self, obj):

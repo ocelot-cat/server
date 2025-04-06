@@ -1,5 +1,4 @@
 from rest_framework.permissions import BasePermission
-
 from companies.models import CompanyMembership
 
 
