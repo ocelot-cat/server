@@ -51,7 +51,6 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
-            "uuid",
             "category",
             "company",
             "storage_months",

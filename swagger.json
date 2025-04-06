@@ -109,6 +109,28 @@ GOOGLE_APPLICATION_CREDENTIALS not set or file not found
                 }
             ]
         },
+        "/companies/notifications/": {
+            "get": {
+                "operationId": "companies_notifications_list",
+                "description": "",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/Notification"
+                            }
+                        }
+                    }
+                },
+                "tags": [
+                    "companies"
+                ]
+            },
+            "parameters": []
+        },
         "/companies/{company_id}/departments/": {
             "post": {
                 "operationId": "companies_departments_create",
@@ -449,5 +471,42 @@ GOOGLE_APPLICATION_CREDENTIALS not set or file not found
             "parameters": []
         }
     },
-    "definitions": {}
+    "definitions": {
+        "Notification": {
+            "required": [
+                "message"
+            ],
+            "type": "object",
+            "properties": {
+                "id": {
+                    "title": "ID",
+                    "type": "integer",
+                    "readOnly": true
+                },
+                "message": {
+                    "title": "Message",
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
+                "target_url": {
+                    "title": "Target url",
+                    "type": "string",
+                    "format": "uri",
+                    "maxLength": 500,
+                    "x-nullable": true
+                },
+                "is_read": {
+                    "title": "Is read",
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "title": "Created at",
+                    "type": "string",
+                    "format": "date-time",
+                    "readOnly": true
+                }
+            }
+        }
+    }
 }

@@ -19,6 +19,8 @@ python-dotenv = "^1.0.1"
 qrcode = "^8.0"
 drf-yasg = "^1.21.10"
 python-dateutil = "^2.9.0.post0"
+celery = "^5.5.0"
+redis = "^5.2.1"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
