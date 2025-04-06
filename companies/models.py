@@ -38,6 +38,14 @@ class CompanyMembership(models.Model):
         "Department", on_delete=models.CASCADE, null=True, blank=True
     )
 
+    def save(self, *args, **kwargs):
+        is_new = self._state.adding
+        super().save(*args, **kwargs)
+        if is_new and self.role != "employee":
+            from companies.tasks import create_notification_for_new_member
+
+            create_notification_for_new_member.delay(self.company_id, self.id)
+
     class Meta:
         indexes = [
             models.Index(fields=["role"]),
@@ -79,3 +87,27 @@ class Invitation(models.Model):
 
     def __str__(self):
         return f"Invitation to {self.company.name} for {self.email}"
+
+
+# 알림모델
+class Notification(models.Model):
+    recipient = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="notifications"
+    )
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, related_name="notifications"
+    )
+    message = models.CharField(max_length=255)
+    target_url = models.URLField(max_length=500, blank=True, null=True)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["recipient", "is_read"]),
+            models.Index(fields=["created_at"]),
+        ]
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.recipient.username} - {self.message}"

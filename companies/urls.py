@@ -8,12 +8,14 @@ from .views import (
     InvitationAcceptView,
     CompanyView,
     CompanyDetailView,
+    NotificationListView,
 )
 
 
 urlpatterns = [
     path("", CompanyView.as_view(), name="company"),
     path("<int:pk>/", CompanyDetailView.as_view(), name="company_detail"),
+    path("notifications/", NotificationListView.as_view(), name="notification_list"),
     path(
         "<int:company_id>/members/",
         CompanyMembersListView.as_view(),

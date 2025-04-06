@@ -1,4 +1,5 @@
 from django.db.models import Q
+from rest_framework.generics import ListAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -7,8 +8,8 @@ from .permissions import (
     IsCompanyAdminOrOwner,
     IsCompanyOwner,
 )
-from .models import Company, CompanyMembership, Department, Invitation
-from .serializers import CompanySerializer, DepartmentSerializer
+from .models import Company, CompanyMembership, Department, Invitation, Notification
+from .serializers import CompanySerializer, DepartmentSerializer, NotificationSerializer
 from django.utils import timezone
 from datetime import timedelta
 import uuid
@@ -293,3 +294,16 @@ class InvitationAcceptView(APIView):
         invitation.save()
 
         return Response({"message": "초대가 수락되었습니다."})
+
+
+class NotificationListView(ListAPIView):
+    serializer_class = NotificationSerializer
+    permission_classes = [IsAuthenticated, IsCompanyAdminOrOwner]
+
+    def get_queryset(self):
+        return Notification.objects.filter(
+            recipient=self.request.user,
+            company__in=self.request.user.companies.filter(
+                companymembership__role__in=["admin", "owner"]
+            ),
+        ).select_related("company", "recipient")

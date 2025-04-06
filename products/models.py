@@ -1,4 +1,3 @@
-from uuid import uuid4
 from django.db import models, transaction
 from django.core.validators import MinValueValidator
 from companies.models import Company
@@ -9,7 +8,6 @@ from django.urls import reverse
 
 class Product(CommonModel):
     name = models.CharField(max_length=100)
-    uuid = models.UUIDField(default=uuid4, editable=False, unique=True)
     category = models.CharField(max_length=50)
     company = models.ForeignKey(
         Company, on_delete=models.CASCADE, related_name="products"
@@ -21,9 +19,16 @@ class Product(CommonModel):
         default=20, validators=[MinValueValidator(1)], help_text="한 박스당 개수"
     )
 
+    def save(self, *args, **kwargs):
+        is_new = self._state.adding
+        super().save(*args, **kwargs)
+        if is_new:
+            from companies.tasks import create_notification_for_new_product
+
+            create_notification_for_new_product.delay(self.company_id, self.id)
+
     class Meta:
         indexes = [
-            models.Index(fields=["uuid"]),
             models.Index(fields=["category"]),
         ]
 
@@ -31,10 +36,10 @@ class Product(CommonModel):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("product_detail", kwargs={"uuid": self.uuid})
+        return reverse("product_detail", kwargs={"pk": self.id})
 
     def get_qr_code_url(self):
-        return f"http://127.0.0.1:8000/api/v1/products/{self.uuid}"
+        return f"http://127.0.0.1:8000/api/v1/products/{self.id}"
 
     def get_total_stock(self):
         """현재 총 재고 계산"""
