@@ -30,6 +30,5 @@ urlpatterns = [
     path("api/v1/users/", include("users.urls")),
     path("api/v1/products/", include("products.urls")),
     path("api/v1/companies/", include("companies.urls")),
-    path("api/v1/notifications/", include("notifications.urls")),
     path("api/v1/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
 ]

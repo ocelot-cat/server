@@ -69,11 +69,10 @@ CUSTOM_APPS = [
     "users.apps.UsersConfig",
     "products.apps.ProductsConfig",
     "companies.apps.CompaniesConfig",
-    "notifications.apps.NotificationsConfig",
 ]
 
 
-THIRD_PARTY_APPS = ["corsheaders", "rest_framework", "drf_yasg", "storages", "celery"]
+THIRD_PARTY_APPS = ["corsheaders", "rest_framework", "drf_yasg"]
 
 INSTALLED_APPS = SYSTEM_APPS + THIRD_PARTY_APPS + CUSTOM_APPS
 
