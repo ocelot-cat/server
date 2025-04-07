@@ -1,5 +1,5 @@
 from django.db.models import Q
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, UpdateAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -301,9 +301,25 @@ class NotificationListView(ListAPIView):
     permission_classes = [IsAuthenticated, IsCompanyAdminOrOwner]
 
     def get_queryset(self):
-        return Notification.objects.filter(
-            recipient=self.request.user,
-            company__in=self.request.user.companies.filter(
-                companymembership__role__in=["admin", "owner"]
-            ),
-        ).select_related("company", "recipient")
+        # 현재 유저가 수신자인 모든 알림 반환
+        return (
+            Notification.objects.filter(recipient=self.request.user)
+            .select_related("company", "recipient")
+            .order_by("-created_at")
+        )
+
+
+class NotificationMarkReadView(UpdateAPIView):
+    serializer_class = NotificationSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = "id"
+
+    def get_queryset(self):
+        return Notification.objects.filter(recipient=self.request.user)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_read = True
+        instance.save(update_fields=["is_read"])
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data, status=status.HTTP_200_OK)
