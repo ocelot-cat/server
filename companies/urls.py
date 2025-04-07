@@ -9,6 +9,7 @@ from .views import (
     CompanyView,
     CompanyDetailView,
     NotificationListView,
+    NotificationMarkReadView,
 )
 
 
@@ -16,6 +17,11 @@ urlpatterns = [
     path("", CompanyView.as_view(), name="company"),
     path("<int:pk>/", CompanyDetailView.as_view(), name="company_detail"),
     path("notifications/", NotificationListView.as_view(), name="notification_list"),
+    path(
+        "notifications/<int:id>/mark-read/",
+        NotificationMarkReadView.as_view(),
+        name="notification_mark_read",
+    ),
     path(
         "<int:company_id>/members/",
         CompanyMembersListView.as_view(),

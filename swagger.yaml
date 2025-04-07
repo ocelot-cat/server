@@ -97,6 +97,44 @@ paths:
       tags:
       - companies
     parameters: []
+  /companies/notifications/{id}/mark-read/:
+    put:
+      operationId: companies_notifications_mark-read_update
+      description: ''
+      parameters:
+      - name: data
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/Notification'
+      responses:
+        '200':
+          description: ''
+          schema:
+            $ref: '#/definitions/Notification'
+      tags:
+      - companies
+    patch:
+      operationId: companies_notifications_mark-read_partial_update
+      description: ''
+      parameters:
+      - name: data
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/Notification'
+      responses:
+        '200':
+          description: ''
+          schema:
+            $ref: '#/definitions/Notification'
+      tags:
+      - companies
+    parameters:
+    - name: id
+      in: path
+      required: true
+      type: string
   /companies/{company_id}/departments/:
     post:
       operationId: companies_departments_create

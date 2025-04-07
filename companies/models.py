@@ -41,7 +41,7 @@ class CompanyMembership(models.Model):
     def save(self, *args, **kwargs):
         is_new = self._state.adding
         super().save(*args, **kwargs)
-        if is_new and self.role != "employee":
+        if is_new:  # 모든 새로운 멤버 추가 시 트리거
             from companies.tasks import create_notification_for_new_member
 
             create_notification_for_new_member.delay(self.company_id, self.id)
