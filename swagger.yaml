@@ -20,17 +20,6 @@ security:
 - Basic: []
 paths:
   /companies/:
-    get:
-      operationId: companies_list
-      description: |-
-        기능 : 회사를 만들 수 있습니다.
-        허용 : 누구나
-      parameters: []
-      responses:
-        '200':
-          description: ''
-      tags:
-      - companies
     post:
       operationId: companies_create
       description: |-

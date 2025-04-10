@@ -3,7 +3,10 @@ from django.core.validators import MinValueValidator
 from companies.models import Company
 from core.models import CommonModel
 from users.models import User
+from config.celery import app as celery_app
 from django.urls import reverse
+from celery.exceptions import OperationalError
+from redis.exceptions import ConnectionError
 
 
 class Product(CommonModel):
@@ -25,7 +28,12 @@ class Product(CommonModel):
         if is_new:
             from companies.tasks import create_notification_for_new_product
 
-            create_notification_for_new_product.delay(self.company_id, self.id)
+            conn = celery_app.connection()
+            try:
+                conn.connect()
+                create_notification_for_new_product.delay(self.company_id, self.id)
+            except (OperationalError, ConnectionError):
+                create_notification_for_new_product(self.company_id, self.id)
 
     class Meta:
         indexes = [
@@ -42,7 +50,6 @@ class Product(CommonModel):
         return f"http://127.0.0.1:8000/api/v1/products/{self.id}"
 
     def get_total_stock(self):
-        """현재 총 재고 계산"""
         records = self.records.filter(record_type="in")
         total_pieces = sum(
             (r.box_quantity * self.pieces_per_box)
