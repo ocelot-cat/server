@@ -1,7 +1,10 @@
+import uuid
+from celery.exceptions import OperationalError
+from redis.exceptions import ConnectionError
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
-import uuid
+from config.celery import app as celery_app
 from users.models import User
 
 
@@ -41,10 +44,15 @@ class CompanyMembership(models.Model):
     def save(self, *args, **kwargs):
         is_new = self._state.adding
         super().save(*args, **kwargs)
-        if is_new:  # 모든 새로운 멤버 추가 시 트리거
+        if is_new:
             from companies.tasks import create_notification_for_new_member
 
-            create_notification_for_new_member.delay(self.company_id, self.id)
+            conn = celery_app.connection()
+            try:
+                conn.connect()
+                create_notification_for_new_member.delay(self.company_id, self.id)
+            except (OperationalError, ConnectionError):
+                create_notification_for_new_member(self.company_id, self.id)
 
     class Meta:
         indexes = [
