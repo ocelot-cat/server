@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ['python310', 'poetry']
+
+[phases.install]
+cmds = [
+    'python -m venv --copies /opt/venv',
+    '. /opt/venv/bin/activate',
+    'pip install poetry>=1.8.0',
+    'poetry config virtualenvs.create false',
+    'poetry install --no-dev --no-interaction --no-ansi'
+]

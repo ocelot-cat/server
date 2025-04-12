@@ -36,7 +36,7 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 
 # ⭐️ 우선 모든 호스트를 허용하도록 설정 (개발용) 추후 배포 단계에서 변경 필요
 ALLOWED_HOSTS = [
-    "your-railway-app.up.railway.app",  # Railway에서 제공하는 도메인
+    "web-production-c3793.up.railway.app",  # Railway에서 제공하는 도메인
     "localhost",
     "127.0.0.1",
 ]
