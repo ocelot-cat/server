@@ -42,6 +42,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:19000",
     "http://192.168.0.221:19000",
     "exp://192.168.0.221:8081",
+    "https://server-production-eaf1.up.railway.app",
 ]
 
 # CSRF 예외 처리 (필요 시)
