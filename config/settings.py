@@ -15,7 +15,7 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-
+import dj_database_url
 from django.utils.timezone import timedelta
 from drf_yasg import openapi
 from google.oauth2 import service_account
@@ -30,12 +30,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-1ini7kl%*nsg)d33hxb3pk&tjq92zw5%=ofqg@*gpfocno^v(s"
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-fallback-key")
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
 # ⭐️ 우선 모든 호스트를 허용하도록 설정 (개발용) 추후 배포 단계에서 변경 필요
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = [
+    "your-railway-app.up.railway.app",  # Railway에서 제공하는 도메인
+    "localhost",
+    "127.0.0.1",
+]
 
 # 허용할 Origin 설정 (개발용)
 CORS_ALLOWED_ORIGINS = [
@@ -134,8 +138,8 @@ CORS_ALLOW_HEADERS = [
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
-GS_BUCKET_NAME = "django-ocelot"
-GS_PROJECT_ID = "django-ocelot"
+GS_BUCKET_NAME = os.getenv("GS_BUCKET_NAME", "django-ocelot")
+GS_PROJECT_ID = os.getenv("GS_PROJECT_ID", "django-ocelot")
 
 google_credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 if google_credentials_path and os.path.exists(google_credentials_path):
@@ -153,10 +157,11 @@ else:
     GS_CREDENTIALS = None
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    "default": dj_database_url.config(
+        default="sqlite:///" + str(BASE_DIR / "db.sqlite3"),
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 
@@ -208,6 +213,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
+
 AUTH_USER_MODEL = "users.User"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
