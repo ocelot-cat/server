@@ -1,6 +1,5 @@
 from django.db import models, transaction
 from django.core.validators import MinValueValidator
-from django.utils import timezone
 from companies.models import Company
 from core.models import CommonModel
 from users.models import User
@@ -80,7 +79,7 @@ class ProductRecord(models.Model):
         default=0, validators=[MinValueValidator(0)]
     )  # 소진된 수량
     recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    record_date = models.DateTimeField(default=timezone.now, null=False, blank=False)
+    record_date = models.DateTimeField(auto_now_add=True)
     expiration_date = models.DateTimeField(null=True, blank=True)
 
     class Meta:
