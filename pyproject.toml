@@ -23,7 +23,7 @@ celery = "^5.5.0"
 redis = "^5.2.1"
 dj-database-url = "^2.3.0"
 psycopg = { extras = ["binary"], version = "^3.2.1" }
-gunicorn = "^23.0.0"  # 배포용 WSGI 서버
+gunicorn = "^23.0.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
