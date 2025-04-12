@@ -35,7 +35,7 @@ SECRET_KEY = "django-insecure-1ini7kl%*nsg)d33hxb3pk&tjq92zw5%=ofqg@*gpfocno^v(s
 DEBUG = False
 
 # ⭐️ 우선 모든 호스트를 허용하도록 설정 (개발용) 추후 배포 단계에서 변경 필요
-ALLOWED_HOSTS = ["server.railway.app", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["server-production-eaf1.up.railway.app", "localhost", "127.0.0.1"]
 
 # 허용할 Origin 설정 (개발용)
 CORS_ALLOWED_ORIGINS = [
@@ -49,7 +49,7 @@ CORS_ALLOW_ALL_ORIGINS = True  # 개발 단계에서만 사용
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
 
 CORS_ALLOWED_ORIGINS = [
-    "https://ocelot.up.railway.app",
+    "https://server-production-eaf1.up.railway.app",
 ]
 
 # Application definition
