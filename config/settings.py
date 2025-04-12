@@ -11,9 +11,10 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 import json
-from pathlib import Path
 import os
+from pathlib import Path
 from dotenv import load_dotenv
+import dj_database_url
 
 
 from django.utils.timezone import timedelta
@@ -32,27 +33,23 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-1ini7kl%*nsg)d33hxb3pk&tjq92zw5%=ofqg@*gpfocno^v(s"
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "False") == "True"
+
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # ⭐️ 우선 모든 호스트를 허용하도록 설정 (개발용) 추후 배포 단계에서 변경 필요
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "your-app.railway.app").split(",")
 
 # 허용할 Origin 설정 (개발용)
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:19000",
-    "http://192.168.0.221:19000",
-    "exp://192.168.0.221:8081",
-]
+CORS_ALLOW_ALL_ORIGINS = False
 
 # CSRF 예외 처리 (필요 시)
 CORS_ALLOW_ALL_ORIGINS = True  # 개발 단계에서만 사용
+CORS_ALLOWED_ORIGINS = os.getenv(
+    "CORS_ALLOWED_ORIGINS", "https://your-frontend.com"
+).split(",")
+
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
-
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:19006",  # Expo 개발 서버
-    "http://127.0.0.1:8000",  # Django 서버
-]
-
 # Application definition
 
 SYSTEM_APPS = [
@@ -152,13 +149,23 @@ else:
     print("GOOGLE_APPLICATION_CREDENTIALS not set or file not found")
     GS_CREDENTIALS = None
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+if DATABASE_URL:
+    # Use PostgreSQL from Railway
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            engine="django.db.backends.postgresql",
+        )
     }
-}
-
+else:
+    # Fallback to SQLite for local development
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -207,7 +214,9 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+
 AUTH_USER_MODEL = "users.User"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
@@ -219,5 +228,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Celery settings
-CELERY_BROKER_URL = "redis://localhost:6379/0"
-CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
+CELERY_BROKER_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
