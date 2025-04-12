@@ -1,4 +1,4 @@
-Error decoding Google Cloud credentials: Expecting value: line 1 column 1 (char 0)
+GOOGLE_APPLICATION_CREDENTIALS not set or file not found
 swagger: '2.0'
 info:
   title: ocelot-cat API

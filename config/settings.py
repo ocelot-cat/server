@@ -11,45 +11,50 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 import json
-import os
 from pathlib import Path
+import os
 from dotenv import load_dotenv
+
+
 from django.utils.timezone import timedelta
 from drf_yasg import openapi
 from google.oauth2 import service_account
-import dj_database_url
 
-# .env 파일 로드
 load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-1ini7kl%*nsg)d33hxb3pk&tjq92zw5%=ofqg@*gpfocno^v(s",
-)
-
+SECRET_KEY = "django-insecure-1ini7kl%*nsg)d33hxb3pk&tjq92zw5%=ofqg@*gpfocno^v(s"
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "False") == "True"
+DEBUG = True
 
-# 동적으로 ALLOWED_HOSTS 설정
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
+# ⭐️ 우선 모든 호스트를 허용하도록 설정 (개발용) 추후 배포 단계에서 변경 필요
+ALLOWED_HOSTS = ["*"]
 
-# CORS 설정
-CORS_ALLOWED_ORIGINS = os.getenv(
-    "CORS_ALLOWED_ORIGINS", "http://localhost:19006,http://127.0.0.1:8000"
-).split(",")
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # 개발 환경에서만 True
-CSRF_TRUSTED_ORIGINS = os.getenv(
-    "CSRF_TRUSTED_ORIGINS", "http://localhost:19006,http://127.0.0.1:8000"
-).split(",")
+# 허용할 Origin 설정 (개발용)
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:19000",
+    "http://192.168.0.221:19000",
+    "exp://192.168.0.221:8081",
+]
+
+# CSRF 예외 처리 (필요 시)
+CORS_ALLOW_ALL_ORIGINS = True  # 개발 단계에서만 사용
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:19006",  # Expo 개발 서버
+    "http://127.0.0.1:8000",  # Django 서버
+]
 
 # Application definition
+
 SYSTEM_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -66,9 +71,11 @@ CUSTOM_APPS = [
     "companies.apps.CompaniesConfig",
 ]
 
+
 THIRD_PARTY_APPS = ["corsheaders", "rest_framework", "drf_yasg"]
 
 INSTALLED_APPS = SYSTEM_APPS + THIRD_PARTY_APPS + CUSTOM_APPS
+
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -80,6 +87,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
 
 ROOT_URLCONF = "config.urls"
 
@@ -101,15 +109,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# REST Framework 설정
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
 }
-
-# Simple JWT 설정
 SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
     "USER_ID_FIELD": "id",
@@ -121,29 +127,21 @@ SIMPLE_JWT = {
 }
 
 CORS_ALLOW_HEADERS = [
-    "authorization",
+    "authorization",  # Authorization 헤더 허용
     "content-type",
 ]
+# Database
+# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-# Database 설정
-# Railway의 PostgreSQL 또는 로컬 SQLite
-DATABASES = {
-    "default": dj_database_url.config(
-        default=os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR}/db.sqlite3"),
-        conn_max_age=600,
-    )
-}
-
-# Google Cloud Storage 설정
 DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
-GS_BUCKET_NAME = os.getenv("GS_BUCKET_NAME", "server")
-GS_PROJECT_ID = os.getenv("GS_PROJECT_ID", "server")
+GS_BUCKET_NAME = "django-ocelot"
+GS_PROJECT_ID = "django-ocelot"
 
-# GOOGLE_APPLICATION_CREDENTIALS 처리
-google_credentials_json = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-if google_credentials_json:
+google_credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+if google_credentials_path and os.path.exists(google_credentials_path):
     try:
-        google_credentials = json.loads(google_credentials_json)
+        with open(google_credentials_path, "r") as f:
+            google_credentials = json.load(f)
         GS_CREDENTIALS = service_account.Credentials.from_service_account_info(
             google_credentials
         )
@@ -151,10 +149,20 @@ if google_credentials_json:
         print(f"Error decoding Google Cloud credentials: {e}")
         GS_CREDENTIALS = None
 else:
-    print("GOOGLE_APPLICATION_CREDENTIALS not set")
+    print("GOOGLE_APPLICATION_CREDENTIALS not set or file not found")
     GS_CREDENTIALS = None
 
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
+}
+
+
 # Password validation
+# https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
@@ -170,7 +178,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Swagger 설정
+
+# SWAGGER SETTINGS
+
 SWAGGER_SETTINGS = {
     "DEFAULT_INFO": openapi.Info(
         title="ocelot-cat API",
@@ -183,31 +193,31 @@ SWAGGER_SETTINGS = {
 }
 
 # Internationalization
+# https://docs.djangoproject.com/en/5.1/topics/i18n/
+
 LANGUAGE_CODE = "ko-kr"
+
 TIME_ZONE = "Asia/Seoul"
+
 USE_I18N = True
+
 USE_TZ = True
 
-# Static files
-STATIC_URL = "/static/"
-STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
-# Media files
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/5.1/howto/static-files/
+
+STATIC_URL = "static/"
 AUTH_USER_MODEL = "users.User"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
+
 # Default primary key field type
+# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Celery 설정
-CELERY_BROKER_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_SERIALIZER = "json"
-
-# 프로덕션 보안 설정
-SECURE_SSL_REDIRECT = not DEBUG
-SESSION_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_SECURE = not DEBUG
+# Celery settings
+CELERY_BROKER_URL = "redis://localhost:6379/0"
+CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
