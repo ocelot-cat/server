@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 import os
 from dotenv import load_dotenv
-import dj_database_url
+
 
 from django.utils.timezone import timedelta
 from drf_yasg import openapi
@@ -32,17 +32,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-1ini7kl%*nsg)d33hxb3pk&tjq92zw5%=ofqg@*gpfocno^v(s"
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 # ⭐️ 우선 모든 호스트를 허용하도록 설정 (개발용) 추후 배포 단계에서 변경 필요
-ALLOWED_HOSTS = ["server-production-eaf1.up.railway.app", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["*"]
 
 # 허용할 Origin 설정 (개발용)
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:19000",
     "http://192.168.0.221:19000",
     "exp://192.168.0.221:8081",
-    "https://server-production-eaf1.up.railway.app",
 ]
 
 # CSRF 예외 처리 (필요 시)
@@ -50,7 +49,8 @@ CORS_ALLOW_ALL_ORIGINS = True  # 개발 단계에서만 사용
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
 
 CORS_ALLOWED_ORIGINS = [
-    "https://server-production-eaf1.up.railway.app",
+    "http://localhost:19006",  # Expo 개발 서버
+    "http://127.0.0.1:8000",  # Django 서버
 ]
 
 # Application definition
@@ -152,22 +152,13 @@ else:
     print("GOOGLE_APPLICATION_CREDENTIALS not set or file not found")
     GS_CREDENTIALS = None
 
-
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "ocelot_db",
-        "USER": "chris",
-        "PASSWORD": "",
-        "HOST": "localhost",
-        "PORT": "5432",
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
 
-if "DATABASE_URL" in os.environ:
-    DATABASES["default"] = dj_database_url.config(
-        conn_max_age=600, ssl_require=os.getenv("RAILWAY_ENVIRONMENT") == "production"
-    )
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
