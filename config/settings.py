@@ -151,8 +151,22 @@ else:
     print("GOOGLE_APPLICATION_CREDENTIALS not set or file not found")
     GS_CREDENTIALS = None
 
-DATABASES = {"default": dj_database_url.config(default=os.getenv("DATABASE_URL"))}
 
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "ocelot_db",
+        "USER": "chris",
+        "PASSWORD": "",
+        "HOST": "localhost",
+        "PORT": "5432",
+    }
+}
+
+if "DATABASE_URL" in os.environ:
+    DATABASES["default"] = dj_database_url.config(
+        conn_max_age=600, ssl_require=os.getenv("RAILWAY_ENVIRONMENT") == "production"
+    )
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
