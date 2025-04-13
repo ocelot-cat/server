@@ -46,7 +46,7 @@ CORS_ALLOWED_ORIGINS = [
 # CSRF 예외 처리 (필요 시)
 CORS_ALLOW_ALL_ORIGINS = True  # 개발 단계에서만 사용
 
-CSRF_TRUSTED_ORIGINS = ["https://ocleot.up.railway.app"]
+CSRF_TRUSTED_ORIGINS = ["https://ocleot.up.railway.app",]
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:19006",  # Expo 개발 서버
@@ -161,7 +161,7 @@ DATABASES = {
         "PASSWORD": config("POSTGRES_PASSWORD"),
         "HOST": config("PGHOST"),
         "PORT": config("PGPORT"),
-    }role
+    }
 }
 
 # Password validation
