@@ -21,6 +21,8 @@ drf-yasg = "^1.21.10"
 python-dateutil = "^2.9.0.post0"
 celery = "^5.5.0"
 redis = "^5.2.1"
+psycopg2-binary = "^2.9.10"
+python-decouple = "^3.8"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

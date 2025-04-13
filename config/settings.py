@@ -14,8 +14,7 @@ import json
 from pathlib import Path
 import os
 from dotenv import load_dotenv
-
-
+from decouple import config
 from django.utils.timezone import timedelta
 from drf_yasg import openapi
 from google.oauth2 import service_account
@@ -154,11 +153,14 @@ else:
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": config("DB_NAME"),
+        "USER": config("DB_USER"),
+        "PASSWORD": config("DB_PASSWORD"),
+        "HOST": config("DB_HOST"),
+        "PORT": config("DB_PORT"),
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
