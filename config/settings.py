@@ -34,7 +34,7 @@ SECRET_KEY = "django-insecure-1ini7kl%*nsg)d33hxb3pk&tjq92zw5%=ofqg@*gpfocno^v(s
 DEBUG = True
 
 # ⭐️ 우선 모든 호스트를 허용하도록 설정 (개발용) 추후 배포 단계에서 변경 필요
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1","ocleot.up.railway.app"]
 
 # 허용할 Origin 설정 (개발용)
 CORS_ALLOWED_ORIGINS = [
@@ -45,7 +45,8 @@ CORS_ALLOWED_ORIGINS = [
 
 # CSRF 예외 처리 (필요 시)
 CORS_ALLOW_ALL_ORIGINS = True  # 개발 단계에서만 사용
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
+
+CSRF_TRUSTED_ORIGINS = ["https://ocleot.up.railway.app"]
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:19006",  # Expo 개발 서버
