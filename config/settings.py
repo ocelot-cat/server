@@ -155,10 +155,10 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": config("PGDATABASE"),
-        "USER": config("DB_USER"),
-        "PASSWORD": config("DB_PASSWORD"),
-        "HOST": config("DB_HOST"),
-        "PORT": config("DB_PORT"),
+        "USER": config("PGUSER"),
+        "PASSWORD": config("POSTGRES_PASSWORD"),
+        "HOST": config("PGHOST"),
+        "PORT": config("PGPORT"),
     }
 }
 
