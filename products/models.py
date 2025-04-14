@@ -1,4 +1,5 @@
 from django.db import models, transaction
+from django.db.models import Sum, F
 from django.core.validators import MinValueValidator
 from companies.models import Company
 from core.models import CommonModel
@@ -10,6 +11,14 @@ from redis.exceptions import ConnectionError
 
 
 class Product(CommonModel):
+    UNIT_CHOICES = (
+        ("ml", "밀리리터(ml)"),
+        ("g", "그램(g)"),
+        ("kg", "킬로그램(kg)"),
+        ("per", "매(장)"),
+        ("count", "갯수"),
+    )
+
     name = models.CharField(max_length=100)
     category = models.CharField(max_length=50)
     company = models.ForeignKey(
@@ -21,9 +30,18 @@ class Product(CommonModel):
     pieces_per_box = models.IntegerField(
         default=20, validators=[MinValueValidator(1)], help_text="한 박스당 개수"
     )
+    unit = models.CharField(max_length=10, choices=UNIT_CHOICES, default="count")
+    quantity = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="단위에 따른 수량 (갯수는 입력 불필요)",
+    )
 
     def save(self, *args, **kwargs):
         is_new = self._state.adding
+        if self.unit == "count":
+            self.quantity = 1
         super().save(*args, **kwargs)
         if is_new:
             from companies.tasks import create_notification_for_new_product
@@ -41,7 +59,9 @@ class Product(CommonModel):
         ]
 
     def __str__(self):
-        return self.name
+        if self.unit == "count":
+            return f"{self.name} ({self.unit})"
+        return f"{self.name} ({self.quantity} {self.unit})"
 
     def get_absolute_url(self):
         return reverse("product_detail", kwargs={"pk": self.id})
@@ -49,19 +69,21 @@ class Product(CommonModel):
     def get_qr_code_url(self):
         return f"http://127.0.0.1:8000/api/v1/products/{self.id}"
 
-    def get_total_stock(self):
-        records = self.records.filter(record_type="in")
-        total_pieces = sum(
-            (r.box_quantity * self.pieces_per_box)
-            + r.piece_quantity
-            - r.consumed_quantity
-            for r in records
+
+def get_total_stock(self):
+    result = self.records.filter(record_type="in").aggregate(
+        total_pieces=Sum(
+            (F("box_quantity") * self.pieces_per_box)
+            + F("piece_quantity")
+            - F("consumed_quantity")
         )
-        return {
-            "box_quantity": total_pieces // self.pieces_per_box,
-            "piece_quantity": total_pieces % self.pieces_per_box,
-            "total_pieces": total_pieces,
-        }
+    )
+    total_pieces = result["total_pieces"] or 0
+    return {
+        "box_quantity": total_pieces // self.pieces_per_box,
+        "piece_quantity": total_pieces % self.pieces_per_box,
+        "total_pieces": total_pieces,
+    }
 
 
 class ProductRecord(models.Model):
@@ -104,9 +126,13 @@ class ProductRecord(models.Model):
         if total_out_pieces <= 0:
             return
 
-        # 입고 기록을 오래된 순으로 정렬
-        in_records = self.product.records.filter(record_type="in").order_by(
-            "record_date"
+        in_records = (
+            self.product.records.filter(record_type="in")
+            .exclude(
+                consumed_quantity=F("box_quantity") * self.product.pieces_per_box
+                + F("piece_quantity")
+            )
+            .order_by("record_date")
         )
 
         remaining_out = total_out_pieces
