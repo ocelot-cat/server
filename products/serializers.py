@@ -1,7 +1,9 @@
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 from rest_framework import serializers
-from .models import Product, ProductRecord
+
+from companies.models import Company
+from .models import Product, ProductImage, ProductRecord
 
 
 class ProductRecordSerializer(serializers.ModelSerializer):
@@ -43,8 +45,13 @@ class ProductRecordSerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
-    # records = ProductRecordSerializer(many=True, read_only=True)  # 히스토리 내역
-    current_stock = serializers.SerializerMethodField()  # 계산된 현재 재고
+    current_stock = serializers.SerializerMethodField()
+    images = serializers.ListField(
+        child=serializers.URLField(), write_only=True, required=False
+    )
+    company = serializers.PrimaryKeyRelatedField(
+        queryset=Company.objects.all(), required=False
+    )
 
     class Meta:
         model = Product
@@ -55,9 +62,39 @@ class ProductSerializer(serializers.ModelSerializer):
             "company",
             "storage_months",
             "pieces_per_box",
-            "current_stock",  # 필요하면 추가
+            "unit",
+            "quantity",
+            "images",
+            "current_stock",
         ]
 
     def get_current_stock(self, obj):
-        """현재 재고 계산"""
         return obj.get_total_stock()
+
+    def validate(self, data):
+        unit = data.get("unit")
+        quantity = data.get("quantity")
+        if unit != "count" and (quantity is None or quantity < 0):
+            raise serializers.ValidationError(
+                {"quantity": "단위가 'count'가 아닌 경우 수량은 0 이상이어야 합니다."}
+            )
+        if unit == "count" and quantity is not None and quantity != 1:
+            raise serializers.ValidationError(
+                {"quantity": "단위가 'count'인 경우 수량은 1이어야 합니다."}
+            )
+        return data
+
+    def create(self, validated_data):
+        images_data = validated_data.pop("images", [])
+        product = Product.objects.create(**validated_data)
+
+        for image_url in images_data:
+            ProductImage.objects.create(product=product, image_url=image_url)
+
+        return product
+
+
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ["image_url"]

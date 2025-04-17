@@ -1,4 +1,3 @@
-from django.urls import reverse
 import qrcode
 import base64
 from io import BytesIO
@@ -20,10 +19,7 @@ class ProductView(APIView):
     def post(self, request):
         serializer = ProductSerializer(data=request.data)
         if serializer.is_valid():
-            print("Saving product...")
             product = serializer.save()
-            print(f"Product saved: {product.id}")
-            # 수동으로 시그널 호출
             from django.db.models.signals import post_save
 
             post_save.send(sender=Product, instance=product, created=True)

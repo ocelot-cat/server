@@ -1,13 +1,29 @@
 from django.contrib import admin
+from django.utils.html import format_html
 
 from companies.models import Notification
-from .models import Product, ProductRecord
+from .models import Product, ProductImage, ProductRecord
 
 
 class ProductRecordInline(admin.TabularInline):
     model = ProductRecord
     extra = 0
     readonly_fields = ("record_date",)
+
+
+class ProductImageInline(admin.TabularInline):
+    model = ProductImage
+    extra = 1
+    readonly_fields = ("image_url_link",)
+
+    def image_url_link(self, obj):
+        if obj.image_url:
+            return format_html(
+                '<a href="{}" target="_blank">{}</a>', obj.image_url, obj.image_url
+            )
+        return "-"
+
+    image_url_link.short_description = "이미지 URL"
 
 
 @admin.register(Product)
@@ -18,7 +34,7 @@ class ProductAdmin(admin.ModelAdmin):
     )
     search_fields = ("name", "category")
     list_filter = ("category",)
-    inlines = [ProductRecordInline]
+    inlines = [ProductRecordInline, ProductImageInline]
 
 
 @admin.register(ProductRecord)
