@@ -1,7 +1,6 @@
 from django.db import models, transaction
 from django.db.models import Sum, F
 from django.core.validators import MinValueValidator
-from companies.models import Company
 from core.models import CommonModel
 from users.models import User
 from config.celery import app as celery_app
@@ -19,10 +18,21 @@ class Product(CommonModel):
         ("count", "갯수"),
     )
 
+    CATEGORY_CHOICES = (
+        ("electronics", "전자제품"),
+        ("fashion", "의류"),
+        ("food", "식품"),
+        ("household", "생활용품/가구"),
+        ("chemicals", "화학/위험물"),
+        ("pharma", "의약품"),
+        ("raw_materials", "원자재"),
+        ("miscellaneous", "기타"),
+    )
+
     name = models.CharField(max_length=100)
-    category = models.CharField(max_length=50)
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
     company = models.ForeignKey(
-        Company, on_delete=models.CASCADE, related_name="products"
+        "companies.Company", on_delete=models.CASCADE, related_name="products"
     )
     storage_months = models.IntegerField(
         default=6, validators=[MinValueValidator(1)], help_text="보관 가능 개월 수"
@@ -69,21 +79,30 @@ class Product(CommonModel):
     def get_qr_code_url(self):
         return f"http://127.0.0.1:8000/api/v1/products/{self.id}"
 
-
-def get_total_stock(self):
-    result = self.records.filter(record_type="in").aggregate(
-        total_pieces=Sum(
-            (F("box_quantity") * self.pieces_per_box)
-            + F("piece_quantity")
-            - F("consumed_quantity")
+    def get_total_stock(self):
+        result = self.records.filter(record_type="in").aggregate(
+            total_pieces=Sum(
+                (F("box_quantity") * self.pieces_per_box)
+                + F("piece_quantity")
+                - F("consumed_quantity")
+            )
         )
+        total_pieces = result["total_pieces"] or 0
+        return {
+            "box_quantity": total_pieces // self.pieces_per_box,
+            "piece_quantity": total_pieces % self.pieces_per_box,
+            "total_pieces": total_pieces,
+        }
+
+
+class ProductImage(models.Model):
+    product = models.ForeignKey(
+        Product, on_delete=models.CASCADE, related_name="images"
     )
-    total_pieces = result["total_pieces"] or 0
-    return {
-        "box_quantity": total_pieces // self.pieces_per_box,
-        "piece_quantity": total_pieces % self.pieces_per_box,
-        "total_pieces": total_pieces,
-    }
+    image_url = models.URLField(max_length=999)
+
+    def __str__(self):
+        return f"Image for {self.product.name} ({self.image_url})"
 
 
 class ProductRecord(models.Model):
