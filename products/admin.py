@@ -1,8 +1,44 @@
+from django import forms
 from django.contrib import admin
-from django.utils.html import format_html
 
 from companies.models import Notification
+from products.services import upload_image_to_cloudflare
 from .models import Product, ProductImage, ProductRecord
+
+
+class ProductImageForm(forms.ModelForm):
+    image_file = forms.ImageField(required=False, label="Upload Image")
+
+    class Meta:
+        model = ProductImage
+        fields = ["image_url"]
+
+    def clean(self):
+        cleaned_data = super().clean()
+        image_file = cleaned_data.get("image_file")
+        image_url = cleaned_data.get("image_url")
+
+        if not image_file and not image_url:
+            return cleaned_data
+
+        if image_file:
+            cleaned_data["image_url"] = None
+        elif not image_url:
+            raise forms.ValidationError(
+                "Please provide an image URL if no image file is uploaded."
+            )
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.cleaned_data.get("image_file"):
+            instance.image_url = upload_image_to_cloudflare(
+                self.cleaned_data["image_file"]
+            )
+        if commit:
+            instance.save()
+        return instance
 
 
 class ProductRecordInline(admin.TabularInline):
@@ -13,17 +49,10 @@ class ProductRecordInline(admin.TabularInline):
 
 class ProductImageInline(admin.TabularInline):
     model = ProductImage
+    form = ProductImageForm
     extra = 1
-    readonly_fields = ("image_url_link",)
-
-    def image_url_link(self, obj):
-        if obj.image_url:
-            return format_html(
-                '<a href="{}" target="_blank">{}</a>', obj.image_url, obj.image_url
-            )
-        return "-"
-
-    image_url_link.short_description = "이미지 URL"
+    fields = ["image_file", "image_url"]
+    readonly_fields = ["image_url"]
 
 
 @admin.register(Product)

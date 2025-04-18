@@ -2,6 +2,7 @@ from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 from rest_framework import serializers
 
+from .services import upload_image_to_cloudflare
 from companies.models import Company
 from .models import Product, ProductImage, ProductRecord
 
@@ -47,8 +48,9 @@ class ProductRecordSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     current_stock = serializers.SerializerMethodField()
     images = serializers.ListField(
-        child=serializers.URLField(), write_only=True, required=False
+        child=serializers.ImageField(), write_only=True, required=False
     )
+    image_urls = serializers.SerializerMethodField(read_only=True)
     company = serializers.PrimaryKeyRelatedField(
         queryset=Company.objects.all(), required=False
     )
@@ -65,11 +67,15 @@ class ProductSerializer(serializers.ModelSerializer):
             "unit",
             "quantity",
             "images",
+            "image_urls",
             "current_stock",
         ]
 
     def get_current_stock(self, obj):
         return obj.get_total_stock()
+
+    def get_image_urls(self, obj):
+        return [image.image_url for image in obj.images.all()]
 
     def validate(self, data):
         unit = data.get("unit")
@@ -88,13 +94,8 @@ class ProductSerializer(serializers.ModelSerializer):
         images_data = validated_data.pop("images", [])
         product = Product.objects.create(**validated_data)
 
-        for image_url in images_data:
+        for image_file in images_data:
+            image_url = upload_image_to_cloudflare(image_file)
             ProductImage.objects.create(product=product, image_url=image_url)
 
         return product
-
-
-class ProductImageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProductImage
-        fields = ["image_url"]
