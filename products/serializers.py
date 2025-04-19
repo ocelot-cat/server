@@ -76,18 +76,14 @@ class ProductSerializer(serializers.ModelSerializer):
                 upload_image_to_cloudflare_task.delay(
                     temp_file_path, product.id, content_type=image_file.content_type
                 )
-                ProductImage.objects.create(
-                    product=product,
-                    image_url="https://imagedelivery.net/BxK0jiFZvOFWaDu7QtKNcQ/pending/public",
-                )
             except Exception as e:
                 logger.error(
                     f"Failed to schedule image upload for product {product.id}: {str(e)}"
                 )
                 product.image_upload_status = "failed"
+                ProductImage.objects.filter(product=product).delete()
                 ProductImage.objects.create(
-                    product=product,
-                    image_url="https://imagedelivery.net/BxK0jiFZvOFWaDu7QtKNcQ/default/public",
+                    product=product, image_url="https://picsum.photos/1000"
                 )
                 product.save()
 

@@ -13,7 +13,7 @@ def upload_image_to_cloudflare_task(
     self, temp_file_path, product_id, content_type=None
 ):
     logger.info(
-        f"Starting image upload task for product {product_id} with file {temp_file_path}, content_type: {content_type}"
+        f"Task attempt {self.request.retries + 1}/{self.max_retries + 1} for product {product_id} with file {temp_file_path}, content_type: {content_type}"
     )
     try:
         product = Product.objects.get(id=product_id)
@@ -21,6 +21,7 @@ def upload_image_to_cloudflare_task(
             image_url = upload_image_to_cloudflare(
                 image_file, content_type=content_type
             )
+        ProductImage.objects.filter(product=product).delete()
         ProductImage.objects.create(product=product, image_url=image_url)
         product.image_upload_status = "completed"
         product.save()
@@ -46,6 +47,7 @@ def upload_image_to_cloudflare_task(
                         image_file, content_type=content_type
                     )
                 product = Product.objects.get(id=product_id)
+                ProductImage.objects.filter(product=product).delete()
                 ProductImage.objects.create(product=product, image_url=image_url)
                 product.image_upload_status = "completed"
                 product.save()
@@ -58,9 +60,9 @@ def upload_image_to_cloudflare_task(
                 )
                 product = Product.objects.get(id=product_id)
                 product.image_upload_status = "failed"
+                ProductImage.objects.filter(product=product).delete()
                 ProductImage.objects.create(
-                    product=product,
-                    image_url="https://imagedelivery.net/BxK0jiFZvOFWaDu7QtKNcQ/default/public",
+                    product=product, image_url="https://picsum.photos/1000"
                 )
                 product.save()
                 logger.warning(f"Set default image for product {product_id}")

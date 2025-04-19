@@ -7,16 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 def upload_image_to_cloudflare(image_file, content_type=None):
-    """
-    Upload an image to Cloudflare Images.
-    Args:
-        image_file: File-like object (e.g., _io.BufferedReader)
-        content_type: MIME type (e.g., 'image/jpeg')
-    Returns:
-        str: URL of the uploaded image
-    """
     try:
-        # 기본 content_type
         if not content_type:
             content_type = "image/jpeg"
         url = settings.CLOUDFLARE_IMAGES_URL
