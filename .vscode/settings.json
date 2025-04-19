@@ -1,5 +1,5 @@
 {
-  "flake8.args": ["--max-line-length=125", "--ignore=F401", "--ignore=F811"],
+  "flake8.args": ["--max-line-length=156", "--ignore=F401", "--ignore=F811"],
   "pylint.args": [
     "--reports",
     "12",
