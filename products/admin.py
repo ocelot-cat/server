@@ -1,13 +1,58 @@
+from django import forms
 from django.contrib import admin
-
+from django.forms import ModelForm
 from companies.models import Notification
-from .models import Product, ProductRecord
+from products.services import upload_image_to_cloudflare
+from .models import Product, ProductImage, ProductRecord
+
+
+class ProductImageForm(ModelForm):
+    image_file = forms.ImageField(required=False, label="Upload Image")
+
+    class Meta:
+        model = ProductImage
+        fields = ["image_url"]
+
+    def clean(self):
+        cleaned_data = super().clean()
+        image_file = cleaned_data.get("image_file")
+        image_url = cleaned_data.get("image_url")
+
+        if not image_file and not image_url:
+            return cleaned_data
+
+        if image_file:
+            cleaned_data["image_url"] = None
+        elif not image_url:
+            raise forms.ValidationError(
+                "Please provide an image URL if no image file is uploaded."
+            )
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.cleaned_data.get("image_file"):
+            instance.image_url = upload_image_to_cloudflare(
+                self.cleaned_data["image_file"]
+            )
+        if commit:
+            instance.save()
+        return instance
 
 
 class ProductRecordInline(admin.TabularInline):
     model = ProductRecord
     extra = 0
     readonly_fields = ("record_date",)
+
+
+class ProductImageInline(admin.TabularInline):
+    model = ProductImage
+    form = ProductImageForm
+    extra = 1
+    fields = ["image_file", "image_url"]
+    readonly_fields = ["image_url"]
 
 
 @admin.register(Product)
@@ -18,7 +63,7 @@ class ProductAdmin(admin.ModelAdmin):
     )
     search_fields = ("name", "category")
     list_filter = ("category",)
-    inlines = [ProductRecordInline]
+    inlines = [ProductRecordInline, ProductImageInline]
 
 
 @admin.register(ProductRecord)

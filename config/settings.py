@@ -51,6 +51,7 @@ CSRF_TRUSTED_ORIGINS = ["https://ocleot.up.railway.app",]
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:19006",  # Expo 개발 서버
     "http://127.0.0.1:8000",  # Django 서버
+    "https://imagedelivery.net",
 ]
 
 # Application definition
@@ -222,6 +223,13 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+
 # Celery settings
 CELERY_BROKER_URL = "redis://localhost:6379/0"
 CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
+
+
+CLOUDFLARE_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN")
+CLOUDFLARE_ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID")
+CLOUDFLARE_IMAGES_URL = os.getenv("CLOUDFLARE_IMAGES_URL")
+CLOUDFLARE_ACCOUNT_HASH = os.getenv("CLOUDFLARE_ACCOUNT_HASH")
