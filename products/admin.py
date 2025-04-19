@@ -1,12 +1,12 @@
 from django import forms
 from django.contrib import admin
-
+from django.forms import ModelForm
 from companies.models import Notification
 from products.services import upload_image_to_cloudflare
 from .models import Product, ProductImage, ProductRecord
 
 
-class ProductImageForm(forms.ModelForm):
+class ProductImageForm(ModelForm):
     image_file = forms.ImageField(required=False, label="Upload Image")
 
     class Meta:

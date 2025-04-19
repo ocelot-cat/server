@@ -3,10 +3,8 @@ from django.db.models import Sum, F
 from django.core.validators import MinValueValidator
 from core.models import CommonModel
 from users.models import User
-from config.celery import app as celery_app
+from django.db.transaction import on_commit
 from django.urls import reverse
-from celery.exceptions import OperationalError
-from redis.exceptions import ConnectionError
 
 
 class Product(CommonModel):
@@ -47,6 +45,16 @@ class Product(CommonModel):
         validators=[MinValueValidator(0)],
         help_text="단위에 따른 수량 (갯수는 입력 불필요)",
     )
+    image_upload_status = models.CharField(
+        max_length=20,
+        choices=[
+            ("pending", "Pending"),
+            ("completed", "Completed"),
+            ("failed", "Failed"),
+        ],
+        default="pending",
+        help_text="Image upload status",
+    )
 
     def save(self, *args, **kwargs):
         is_new = self._state.adding
@@ -56,12 +64,11 @@ class Product(CommonModel):
         if is_new:
             from companies.tasks import create_notification_for_new_product
 
-            conn = celery_app.connection()
-            try:
-                conn.connect()
-                create_notification_for_new_product.delay(self.company_id, self.id)
-            except (OperationalError, ConnectionError):
-                create_notification_for_new_product(self.company_id, self.id)
+            on_commit(
+                lambda: create_notification_for_new_product.delay(
+                    self.company_id, self.id
+                )
+            )
 
     class Meta:
         indexes = [
