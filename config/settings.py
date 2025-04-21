@@ -148,10 +148,8 @@ if google_credentials_path and os.path.exists(google_credentials_path):
             google_credentials
         )
     except json.JSONDecodeError as e:
-        print(f"Error decoding Google Cloud credentials: {e}")
         GS_CREDENTIALS = None
 else:
-    print("GOOGLE_APPLICATION_CREDENTIALS not set or file not found")
     GS_CREDENTIALS = None
 
 DATABASES = {
