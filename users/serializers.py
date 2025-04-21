@@ -7,7 +7,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            "id",
+            "pk",
             "username",
             "email",
         ]
@@ -17,5 +17,5 @@ class TokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        token["id"] = user.id
+        token["pk"] = user.pk
         return token
