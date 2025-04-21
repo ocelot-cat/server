@@ -44,17 +44,29 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: google-credentials.json
         run: |
-          poetry run python manage.py generate_swagger --format yaml > swagger.yaml
+          poetry run python manage.py generate_swagger --format yaml > temp_swagger.yaml
+          echo "---" > swagger.yaml
+          cat temp_swagger.yaml >> swagger.yaml
           poetry run python manage.py generate_swagger --format json > swagger.json
-          dos2unix swagger.yaml  # Windows 줄바꿈 문제 방지
+          dos2unix swagger.yaml
           echo "=== swagger.yaml 내용 ==="
-          cat swagger.yaml  # 디버깅: YAML 파일 내용 출력
+          cat swagger.yaml
           echo "=== swagger.json 내용 ==="
-          cat swagger.json  # 디버깅: JSON 파일 내용 출력
+          cat swagger.json
+
+      - name: Fix comma spacing in swagger.yaml
+        run: |
+          sed -i 's/,/, /g' swagger.yaml
+
+      - name: Debug swagger.yaml
+        run: |
+          head -n 10 swagger.yaml
+          echo "Line 3 content:"
+          sed -n '3p' swagger.yaml
 
       - name: Validate YAML
         run: |
-          yamllint swagger.yaml
+          yamllint -c .yamllint.yml swagger.yaml
 
       - name: Install redoc-cli
         run: |
