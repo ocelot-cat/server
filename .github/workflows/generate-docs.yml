@@ -30,18 +30,39 @@ jobs:
         run: |
           poetry install
 
+      - name: Install yamllint
+        run: |
+          sudo apt-get update
+          sudo apt-get install yamllint
+
+      - name: Install dos2unix
+        run: |
+          sudo apt-get update
+          sudo apt-get install dos2unix
+
       - name: Generate API documentation
         env:
           GOOGLE_APPLICATION_CREDENTIALS: google-credentials.json
         run: |
-          poetry run python manage.py generate_swagger --format yaml > swagger_temp.yaml
-          tail -n +2 swagger_temp.yaml > swagger.yaml
+          poetry run python manage.py generate_swagger --format yaml > swagger.yaml
           poetry run python manage.py generate_swagger --format json > swagger.json
+          dos2unix swagger.yaml  # Windows 줄바꿈 문제 방지
+          echo "=== swagger.yaml 내용 ==="
+          cat swagger.yaml  # 디버깅: YAML 파일 내용 출력
+          echo "=== swagger.json 내용 ==="
+          cat swagger.json  # 디버깅: JSON 파일 내용 출력
+
+      - name: Validate YAML
+        run: |
+          yamllint swagger.yaml
+
+      - name: Install redoc-cli
+        run: |
+          npm install -g redoc-cli
 
       - name: Convert Swagger to HTML
-        uses: seeebiii/redoc-cli-github-action@v10
-        with:
-          args: "bundle -o api-docs.html swagger.yaml"
+        run: |
+          redoc-cli bundle -o api-docs.html swagger.yaml
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
