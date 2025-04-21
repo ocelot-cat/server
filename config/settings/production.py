@@ -37,6 +37,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://ocleot.up.railway.app",
 ]
 
+ROOT_URLCONF = "config.urls"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
