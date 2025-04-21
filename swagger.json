@@ -449,13 +449,81 @@
             ]
         },
         "/products/{id}/records/": {
+            "get": {
+                "operationId": "products_records_list",
+                "description": "",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "A page number within the paginated result set.",
+                        "required": false,
+                        "type": "integer"
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "description": "Number of results to return per page.",
+                        "required": false,
+                        "type": "integer"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "required": [
+                                "count",
+                                "results"
+                            ],
+                            "type": "object",
+                            "properties": {
+                                "count": {
+                                    "type": "integer"
+                                },
+                                "next": {
+                                    "type": "string",
+                                    "format": "uri",
+                                    "x-nullable": true
+                                },
+                                "previous": {
+                                    "type": "string",
+                                    "format": "uri",
+                                    "x-nullable": true
+                                },
+                                "results": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/definitions/ProductRecord"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "tags": [
+                    "products"
+                ]
+            },
             "post": {
                 "operationId": "products_records_create",
                 "description": "",
-                "parameters": [],
+                "parameters": [
+                    {
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ProductRecord"
+                        }
+                    }
+                ],
                 "responses": {
                     "201": {
-                        "description": ""
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/ProductRecord"
+                        }
                     }
                 },
                 "tags": [
@@ -642,6 +710,67 @@
                     "title": "Created at",
                     "type": "string",
                     "format": "date-time",
+                    "readOnly": true
+                }
+            }
+        },
+        "ProductRecord": {
+            "required": [
+                "product",
+                "record_type"
+            ],
+            "type": "object",
+            "properties": {
+                "id": {
+                    "title": "ID",
+                    "type": "integer",
+                    "readOnly": true
+                },
+                "product": {
+                    "title": "Product",
+                    "type": "integer"
+                },
+                "record_type": {
+                    "title": "Record type",
+                    "type": "string",
+                    "enum": [
+                        "in",
+                        "out"
+                    ]
+                },
+                "piece_quantity": {
+                    "title": "Piece quantity",
+                    "type": "integer",
+                    "maximum": 9223372036854775807,
+                    "minimum": 0
+                },
+                "box_quantity": {
+                    "title": "Box quantity",
+                    "type": "integer",
+                    "maximum": 9223372036854775807,
+                    "minimum": 0
+                },
+                "recorded_by": {
+                    "title": "Recorded by",
+                    "type": "integer",
+                    "x-nullable": true
+                },
+                "record_date": {
+                    "title": "Record date",
+                    "type": "string",
+                    "format": "date-time",
+                    "readOnly": true
+                },
+                "expiration_date": {
+                    "title": "Expiration date",
+                    "type": "string",
+                    "format": "date-time",
+                    "readOnly": true,
+                    "x-nullable": true
+                },
+                "consumed_quantity": {
+                    "title": "Consumed quantity",
+                    "type": "integer",
                     "readOnly": true
                 }
             }
