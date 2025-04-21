@@ -65,7 +65,7 @@ jobs:
       - name: Format swagger.yaml
         run: |
           poetry run python -c "
-        import yaml
+          import yaml
           with open('swagger.yaml', 'r') as f:
               data = yaml.safe_load(f)
           with open('swagger.yaml', 'w') as f:
