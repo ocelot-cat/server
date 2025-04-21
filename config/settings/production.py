@@ -1,5 +1,6 @@
 import os
 from .base import *
+from .base import BASE_DIR
 from decouple import config
 import json
 from google.oauth2 import service_account
