@@ -12,10 +12,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4  # 최신 버전
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4  # 최신 버전
         with:
           python-version: "3.13"
 
@@ -26,19 +26,15 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
-      - name: Install dependencies
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y yamllint dos2unix
+
+      - name: Install Python dependencies
         run: |
           poetry install
-
-      - name: Install yamllint
-        run: |
-          sudo apt-get update
-          sudo apt-get install yamllint
-
-      - name: Install dos2unix
-        run: |
-          sudo apt-get update
-          sudo apt-get install dos2unix
+          poetry add pyyaml  # pyyaml 설치
 
       - name: Generate API documentation
         env:
@@ -58,15 +54,40 @@ jobs:
         run: |
           sed -i 's/,/, /g' swagger.yaml
 
+      - name: Format swagger.yaml
+        run: |
+          poetry run python -c "
+import yaml
+with open('swagger.yaml', 'r') as f:
+    data = yaml.safe_load(f)
+with open('swagger.yaml', 'w') as f:
+    yaml.dump(data, f, allow_unicode=True, width=120, sort_keys=False, default_flow_style=False)
+"
+
+      - name: Fix missing colon in swagger.yaml
+        run: |
+          sed -i 's/^\(\s*\(get\|post\|put\|delete\)\)\s*$/\1:/' swagger.yaml
+
       - name: Debug swagger.yaml
         run: |
           head -n 10 swagger.yaml
+          echo "Line 2 content:"
+          sed -n '2p' swagger.yaml
           echo "Line 3 content:"
           sed -n '3p' swagger.yaml
+          echo "Line 4 content:"
+          sed -n '4p' swagger.yaml
+          echo "Line 5 content:"
+          sed -n '5p' swagger.yaml
 
       - name: Validate YAML
         run: |
           yamllint -c .yamllint.yml swagger.yaml
+
+      - name: Validate Swagger YAML
+        run: |
+          npm install -g swagger-cli
+          swagger-cli validate swagger.yaml
 
       - name: Install redoc-cli
         run: |
