@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-ENVIRONMENT = os.getenv("DJANGO_ENV", "production")
+ENVIRONMENT = os.getenv("DJANGO_ENV", "development")
 
 if ENVIRONMENT == "production":
     from .settings.production import *
