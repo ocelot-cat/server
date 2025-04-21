@@ -5,6 +5,7 @@ from decouple import config
 import json
 from google.oauth2 import service_account
 
+ROOT_URLCONF = "config.urls"
 DEBUG = False
 ALLOWED_HOSTS = [
     "ocleot.up.railway.app",
