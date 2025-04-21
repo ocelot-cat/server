@@ -1,32 +1,15 @@
 import os
-from .base import (
-    BASE_DIR,
-    SECRET_KEY,
-    INSTALLED_APPS,
-    MIDDLEWARE,
-    ROOT_URLCONF,
-    TEMPLATES,
-    WSGI_APPLICATION,
-    AUTH_USER_MODEL,
-    LANGUAGE_CODE,
-    TIME_ZONE,
-    USE_I18N,
-    USE_TZ,
-    STATIC_URL,
-    MEDIA_URL,
-    MEDIA_ROOT,
-    DEFAULT_AUTO_FIELD,
-    REST_FRAMEWORK,
-    SIMPLE_JWT,
-    CORS_ALLOW_HEADERS,
-    AUTH_PASSWORD_VALIDATORS,
-    SWAGGER_SETTINGS,
-    CELERY_BROKER_URL,
-    CELERY_RESULT_BACKEND,
-)
+from .base import *
+from .base import BASE_DIR, ROOT_URLCONF
 from decouple import config
 import json
 from google.oauth2 import service_account
+import logging
+
+logger = logging.getLogger(__name__)
+logger.info(f"ROOT_URLCONF in production.py: {ROOT_URLCONF}")
+logger.info(f"DJANGO_SETTINGS_MODULE: {os.environ.get('DJANGO_SETTINGS_MODULE')}")
+
 
 DEBUG = False
 ALLOWED_HOSTS = [
