@@ -1,9 +1,17 @@
 import os
 from .base import *
 from .base import BASE_DIR
+from .base import ROOT_URLCONF
 from decouple import config
 import json
 from google.oauth2 import service_account
+
+
+import logging
+
+logger = logging.getLogger(__name__)
+logger.info(f"ROOT_URLCONF: {ROOT_URLCONF}")
+
 
 DEBUG = False
 ALLOWED_HOSTS = [
@@ -14,7 +22,6 @@ CSRF_TRUSTED_ORIGINS = [
     "https://ocleot.up.railway.app",
 ]
 
-ROOT_URLCONF = "config.urls"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
