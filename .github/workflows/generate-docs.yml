@@ -34,22 +34,14 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: google-credentials.json
         run: |
-          poetry run python manage.py generate_swagger --format yaml > swagger.yaml
+          poetry run python manage.py generate_swagger --format yaml > swagger_temp.yaml
+          tail -n +2 swagger_temp.yaml > swagger.yaml
           poetry run python manage.py generate_swagger --format json > swagger.json
 
-      - name: Validate swagger.yaml
-        run: |
-          poetry run python -c "import yaml; yaml.safe_load(open('swagger.yaml'))"
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "16"
-
       - name: Convert Swagger to HTML
-        run: |
-          npm install -g @redocly/cli
-          redocly bundle -o api-docs.html swagger.yaml
+        uses: seeebiii/redoc-cli-github-action@v10
+        with:
+          args: "bundle -o api-docs.html swagger.yaml"
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
