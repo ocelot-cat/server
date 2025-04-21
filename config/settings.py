@@ -30,7 +30,7 @@ from .base import (
 ENVIRONMENT = os.getenv("DJANGO_ENV", "development")
 
 if ENVIRONMENT == "production":
-    from .settings.production import (
+    from .production import (
         DEBUG,
         ALLOWED_HOSTS,
         CORS_ALLOW_ALL_ORIGINS,
@@ -48,7 +48,7 @@ if ENVIRONMENT == "production":
         CLOUDFLARE_ACCOUNT_HASH,
     )
 else:
-    from .settings.development import (
+    from .development import (
         DEBUG,
         ALLOWED_HOSTS,
         CORS_ALLOW_ALL_ORIGINS,
