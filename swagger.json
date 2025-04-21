@@ -1,4 +1,3 @@
-GOOGLE_APPLICATION_CREDENTIALS not set or file not found
 {
     "swagger": "2.0",
     "info": {
@@ -476,10 +475,50 @@ GOOGLE_APPLICATION_CREDENTIALS not set or file not found
             "post": {
                 "operationId": "token_create",
                 "description": "Takes a set of user credentials and returns an access and refresh JSON web\ntoken pair to prove the authentication of those credentials.",
-                "parameters": [],
+                "parameters": [
+                    {
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/TokenObtainPair"
+                        }
+                    }
+                ],
                 "responses": {
                     "201": {
-                        "description": ""
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/TokenObtainPair"
+                        }
+                    }
+                },
+                "tags": [
+                    "token"
+                ]
+            },
+            "parameters": []
+        },
+        "/token/refresh/": {
+            "post": {
+                "operationId": "token_refresh_create",
+                "description": "Takes a refresh type JSON web token and returns an access type JSON web\ntoken if the refresh token is valid.",
+                "parameters": [
+                    {
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/TokenRefresh"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/TokenRefresh"
+                        }
                     }
                 },
                 "tags": [
@@ -489,19 +528,6 @@ GOOGLE_APPLICATION_CREDENTIALS not set or file not found
             "parameters": []
         },
         "/users/": {
-            "get": {
-                "operationId": "users_list",
-                "description": "",
-                "parameters": [],
-                "responses": {
-                    "200": {
-                        "description": ""
-                    }
-                },
-                "tags": [
-                    "users"
-                ]
-            },
             "post": {
                 "operationId": "users_create",
                 "description": "",
@@ -516,6 +542,71 @@ GOOGLE_APPLICATION_CREDENTIALS not set or file not found
                 ]
             },
             "parameters": []
+        },
+        "/users/me/": {
+            "get": {
+                "operationId": "users_me_list",
+                "description": "",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": ""
+                    }
+                },
+                "tags": [
+                    "users"
+                ]
+            },
+            "parameters": []
+        },
+        "/users/{id}/": {
+            "get": {
+                "operationId": "users_read",
+                "description": "",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": ""
+                    }
+                },
+                "tags": [
+                    "users"
+                ]
+            },
+            "put": {
+                "operationId": "users_update",
+                "description": "",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": ""
+                    }
+                },
+                "tags": [
+                    "users"
+                ]
+            },
+            "delete": {
+                "operationId": "users_delete",
+                "description": "",
+                "parameters": [],
+                "responses": {
+                    "204": {
+                        "description": ""
+                    }
+                },
+                "tags": [
+                    "users"
+                ]
+            },
+            "parameters": [
+                {
+                    "name": "id",
+                    "in": "path",
+                    "required": true,
+                    "type": "string"
+                }
+            ]
         }
     },
     "definitions": {
@@ -552,6 +643,44 @@ GOOGLE_APPLICATION_CREDENTIALS not set or file not found
                     "type": "string",
                     "format": "date-time",
                     "readOnly": true
+                }
+            }
+        },
+        "TokenObtainPair": {
+            "required": [
+                "username",
+                "password"
+            ],
+            "type": "object",
+            "properties": {
+                "username": {
+                    "title": "Username",
+                    "type": "string",
+                    "minLength": 1
+                },
+                "password": {
+                    "title": "Password",
+                    "type": "string",
+                    "minLength": 1
+                }
+            }
+        },
+        "TokenRefresh": {
+            "required": [
+                "refresh"
+            ],
+            "type": "object",
+            "properties": {
+                "refresh": {
+                    "title": "Refresh",
+                    "type": "string",
+                    "minLength": 1
+                },
+                "access": {
+                    "title": "Access",
+                    "type": "string",
+                    "readOnly": true,
+                    "minLength": 1
                 }
             }
         }

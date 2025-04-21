@@ -1,18 +1,26 @@
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
+from users.permissions import IsOwnUser
 from .models import User
 from .serializers import UserSerializer
 
 
-class UserView(APIView):
-    permission_classes = [IsAdminUser]
+class UserMeView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
 
     def get(self, request):
-        users = User.objects.all()
-        serializer = UserSerializer(users, many=True)
+        serializer = UserSerializer(request.user, context={"request": request})
         return Response(serializer.data)
+
+
+class UserView(APIView):
+    permission_classes = [IsAdminUser]
 
     def post(self, request):
         serializer = UserSerializer(data=request.data)
@@ -23,7 +31,7 @@ class UserView(APIView):
 
 
 class UserDetailView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsOwnUser]
 
     def get_object(self, pk):
         try:

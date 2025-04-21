@@ -36,23 +36,17 @@ DEBUG = True
 
 # ⭐️ 우선 모든 호스트를 허용하도록 설정 (개발용) 추후 배포 단계에서 변경 필요
 ALLOWED_HOSTS = ["*"]
-
-# 허용할 Origin 설정 (개발용)
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:19000",
-    "http://192.168.0.221:19000",
-    "exp://192.168.0.221:8081",
-]
-
-# CSRF 예외 처리 (필요 시)
-CORS_ALLOW_ALL_ORIGINS = True  # 개발 단계에서만 사용
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
-
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:19006",  # Expo 개발 서버
     "http://127.0.0.1:8000",  # Django 서버
     "https://imagedelivery.net",
 ]
+
+
+# CSRF 예외 처리 (필요 시)
+CORS_ALLOW_ALL_ORIGINS = True  # 개발 단계에서만 사용
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
+
 
 # Application definition
 
@@ -73,7 +67,12 @@ CUSTOM_APPS = [
 ]
 
 
-THIRD_PARTY_APPS = ["corsheaders", "rest_framework", "drf_yasg"]
+THIRD_PARTY_APPS = [
+    "rest_framework",
+    "rest_framework_simplejwt",
+    "drf_yasg",
+    "corsheaders",
+]
 
 INSTALLED_APPS = SYSTEM_APPS + THIRD_PARTY_APPS + CUSTOM_APPS
 
@@ -117,6 +116,8 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
 }
+
+
 SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
     "USER_ID_FIELD": "id",
@@ -128,7 +129,7 @@ SIMPLE_JWT = {
 }
 
 CORS_ALLOW_HEADERS = [
-    "authorization",  # Authorization 헤더 허용
+    "authorization",
     "content-type",
 ]
 # Database
@@ -147,10 +148,8 @@ if google_credentials_path and os.path.exists(google_credentials_path):
             google_credentials
         )
     except json.JSONDecodeError as e:
-        print(f"Error decoding Google Cloud credentials: {e}")
         GS_CREDENTIALS = None
 else:
-    print("GOOGLE_APPLICATION_CREDENTIALS not set or file not found")
     GS_CREDENTIALS = None
 
 DATABASES = {
@@ -191,6 +190,8 @@ SWAGGER_SETTINGS = {
         contact=openapi.Contact(email="devscarycat@icloud.com"),
         license=openapi.License(name="MIT License"),
     ),
+    "USE_SESSION_AUTH": False,
+    "SPEC_VERSION": "2.0",
 }
 
 # Internationalization
