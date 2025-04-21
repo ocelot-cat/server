@@ -14,8 +14,7 @@ import json
 from pathlib import Path
 import os
 from dotenv import load_dotenv
-
-
+from decouple import config
 from django.utils.timezone import timedelta
 from drf_yasg import openapi
 from google.oauth2 import service_account
@@ -35,7 +34,10 @@ SECRET_KEY = "django-insecure-1ini7kl%*nsg)d33hxb3pk&tjq92zw5%=ofqg@*gpfocno^v(s
 DEBUG = True
 
 # ⭐️ 우선 모든 호스트를 허용하도록 설정 (개발용) 추후 배포 단계에서 변경 필요
-ALLOWED_HOSTS = ["*"]
+
+ALLOWED_HOSTS = ["localhost","127.0.0.1","ocleot.up.railway.app"]
+
+# 허용할 Origin 설정 (개발용)
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:19006",  # Expo 개발 서버
     "http://127.0.0.1:8000",  # Django 서버
@@ -45,7 +47,8 @@ CORS_ALLOWED_ORIGINS = [
 
 # CSRF 예외 처리 (필요 시)
 CORS_ALLOW_ALL_ORIGINS = True  # 개발 단계에서만 사용
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
+
+CSRF_TRUSTED_ORIGINS = ["https://ocleot.up.railway.app",]
 
 
 # Application definition
@@ -79,6 +82,7 @@ INSTALLED_APPS = SYSTEM_APPS + THIRD_PARTY_APPS + CUSTOM_APPS
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -154,11 +158,14 @@ else:
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": config("PGDATABASE"),
+        "USER": config("PGUSER"),
+        "PASSWORD": config("POSTGRES_PASSWORD"),
+        "HOST": config("PGHOST"),
+        "PORT": config("PGPORT"),
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
