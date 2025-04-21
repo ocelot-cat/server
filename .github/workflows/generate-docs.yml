@@ -34,8 +34,8 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: google-credentials.json
         run: |
-          poetry run python manage.py generate_swagger --format yaml > swagger.yaml 2>/dev/null
-          poetry run python manage.py generate_swagger --format json > swagger.json 2>/dev/null
+          poetry run python manage.py generate_swagger --format yaml > swagger.yaml
+          poetry run python manage.py generate_swagger --format json > swagger.json
           cat swagger.yaml  # 디버깅용 출력
 
       - name: Convert Swagger to HTML
