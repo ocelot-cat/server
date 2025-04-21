@@ -29,56 +29,75 @@ jobs:
       - name: Install dependencies
         run: |
           poetry install
-          poetry add pyyaml
+
+      - name: Generate API documentation
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: google-credentials.json
+        run: |
+          poetry run python manage.py generate_swagger --format yaml > swagger_temp.yaml
+          tail -n +2 swagger_temp.yaml > swagger.yaml
+          poetry run python manage.py generate_swagger --format json > swagger.json
+
+      - name: Convert Swagger to HTML
+        uses: seeebiii/redoc-cli-github-action@v10
+        with:
+          args: "bundle -o api-docs.html swagger.yaml"
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        if: github.ref == 'refs/heads/develop'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
+          publish_branch: gh-pages
+name: Generate API Documentation
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.13"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.8.2
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies
+        run: |
+          poetry install
 
       - name: Install yamllint
         run: |
           sudo apt-get update
           sudo apt-get install yamllint
 
-      - name: Install dos2unix
-        run: |
-          sudo apt-get update
-          sudo apt-get install dos2unix
-
       - name: Generate API documentation
         env:
           GOOGLE_APPLICATION_CREDENTIALS: google-credentials.json
         run: |
-          poetry run python manage.py generate_swagger --format yaml > temp_swagger.yaml
-          echo "---" > swagger.yaml
-          cat temp_swagger.yaml >> swagger.yaml
+          poetry run python manage.py generate_swagger --format yaml > swagger.yaml
           poetry run python manage.py generate_swagger --format json > swagger.json
-          dos2unix swagger.yaml
-          echo "=== swagger.yaml 내용 ==="
-          cat swagger.yaml
-          echo "=== swagger.json 내용 ==="
-          cat swagger.json
-
-      - name: Format swagger.yaml
-        run: |
-          poetry run python -c "
-import yaml
-with open('swagger.yaml', 'r') as f:
-    data = yaml.safe_load(f)
-with open('swagger.yaml', 'w') as f:
-    yaml.dump(data, f, allow_unicode=True, width=120, sort_keys=False)
-"
-
-      - name: Debug swagger.yaml
-        run: |
-          head -n 10 swagger.yaml
-          echo "Line 4 content:"
-          sed -n '4p' swagger.yaml
+          cat swagger.yaml  # Debug: Print the YAML file
 
       - name: Validate YAML
         run: |
-          yamllint -c .yamllint.yml swagger.yaml
-
-      - name: Validate Swagger YAML
-        run: |
-          npm install -g swagger-cli
-          swagger-cli validate swagger.yaml
+          yamllint swagger.yaml
 
       - name: Install redoc-cli
         run: |
