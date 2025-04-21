@@ -193,7 +193,7 @@ SWAGGER_SETTINGS = {
         license=openapi.License(name="MIT License"),
     ),
     "USE_SESSION_AUTH": False,
-    "SPEC_VERSION": "2.0",  # Ensure Swagger 2.0 if required
+    "SPEC_VERSION": "2.0",
 }
 
 # Internationalization
