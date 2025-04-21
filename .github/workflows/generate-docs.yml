@@ -12,10 +12,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4.0.0
+      - uses: actions/checkout@v2
 
       - name: Set up Python
-        uses: actions/setup-python@v4.0.0
+        uses: actions/setup-python@v2
         with:
           python-version: "3.13"
 
@@ -26,87 +26,23 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
-      - name: Cache Poetry dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pypoetry
-          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-poetry-
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y yamllint dos2unix
-
-      - name: Install Python dependencies
+      - name: Install dependencies
         run: |
           poetry install
-          poetry add pyyaml
-
       - name: Generate API documentation
         env:
           GOOGLE_APPLICATION_CREDENTIALS: google-credentials.json
         run: |
-          poetry run python manage.py generate_swagger --format yaml > temp_swagger.yaml
-          echo "---" > swagger.yaml
-          cat temp_swagger.yaml >> swagger.yaml
+          poetry run python manage.py generate_swagger --format yaml > swagger_temp.yaml
+          tail -n +2 swagger_temp.yaml > swagger.yaml
           poetry run python manage.py generate_swagger --format json > swagger.json
-          dos2unix swagger.yaml
-          echo "=== swagger.yaml 내용 ==="
-          cat swagger.yaml
-          echo "=== swagger.json 내용 ==="
-          cat swagger.json
-
-      - name: Fix comma spacing in swagger.yaml
-        run: |
-          sed -i 's/,/, /g' swagger.yaml
-
-      - name: Format swagger.yaml
-        run: |
-          poetry run python -c "
-          import yaml
-          with open('swagger.yaml', 'r') as f:
-            data = yaml.safe_load(f)
-          with open('swagger.yaml', 'w') as f:
-            yaml.dump(data, f, allow_unicode=True, width=120, sort_keys=False, default_flow_style=False)
-          "
-
-      - name: Fix missing colon in swagger.yaml
-        run: |
-          sed -i 's/^\(\s*\(get\|post\|put\|delete\)\)\s*$/\1:/g' swagger.yaml
-
-      - name: Debug swagger.yaml
-        run: |
-          head -n 10 swagger.yaml
-          echo "Line 2 content:"
-          sed -n '2p' swagger.yaml
-          echo "Line 3 content:"
-          sed -n '3p' swagger.yaml
-          echo "Line 4 content:"
-          sed -n '4p' swagger.yaml
-          echo "Line 5 content:"
-          sed -n '5p' swagger.yaml
-
-      - name: Validate YAML
-        run: |
-          yamllint -c .yamllint.yml swagger.yaml || true  # 임시로 에러 무시
-
-      - name: Validate Swagger YAML
-        run: |
-          npm install -g swagger-cli
-          swagger-cli validate swagger.yaml
-
-      - name: Install redoc-cli
-        run: |
-          npm install -g redoc-cli
-
       - name: Convert Swagger to HTML
-        run: |
-          redoc-cli bundle -o api-docs.html swagger.yaml
+        uses: seeebiii/redoc-cli-github-action@v10
+        with:
+          args: "bundle -o api-docs.html swagger.yaml"
 
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4.0.0
+        uses: peaceiris/actions-gh-pages@v4
         if: github.ref == 'refs/heads/develop'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
