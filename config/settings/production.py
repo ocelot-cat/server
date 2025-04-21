@@ -1,15 +1,9 @@
 import os
 from .base import *
-from .base import BASE_DIR, ROOT_URLCONF
+from .base import BASE_DIR
 from decouple import config
 import json
 from google.oauth2 import service_account
-import logging
-
-logger = logging.getLogger(__name__)
-logger.info(f"ROOT_URLCONF in production.py: {ROOT_URLCONF}")
-logger.info(f"DJANGO_SETTINGS_MODULE: {os.environ.get('DJANGO_SETTINGS_MODULE')}")
-
 
 DEBUG = False
 ALLOWED_HOSTS = [
