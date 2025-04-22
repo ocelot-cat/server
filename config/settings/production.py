@@ -2,6 +2,7 @@ import os
 import json
 from google.oauth2 import service_account
 from .base import *
+from .base import BASE_DIR
 
 DEBUG = False
 ALLOWED_HOSTS = [
@@ -25,6 +26,8 @@ DATABASES = {
 
 
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
 DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
 GS_BUCKET_NAME = "django-ocelot"
 GS_PROJECT_ID = "django-ocelot"
