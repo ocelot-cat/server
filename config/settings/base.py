@@ -2,7 +2,11 @@ import os
 from pathlib import Path
 from decouple import config
 from django.utils.timezone import timedelta
+from dotenv import load_dotenv
 from drf_yasg import openapi
+
+
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
