@@ -1,3 +1,4 @@
+# config/settings/base.py
 import os
 from pathlib import Path
 from decouple import config
