@@ -4,7 +4,7 @@ from google.oauth2 import service_account
 from .base import *
 from .base import BASE_DIR
 
-DEBUG = False
+DEBUG = True
 ALLOWED_HOSTS = [
     "ocleot.up.railway.app",
 ]
