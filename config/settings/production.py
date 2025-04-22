@@ -32,8 +32,9 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 WHITENOISE_MANIFEST_STRICT = False
 
 DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
-GS_BUCKET_NAME = "django-ocelot"
-GS_PROJECT_ID = "django-ocelot"
+GS_BUCKET_NAME = None
+GS_PROJECT_ID = None
+GS_CREDENTIALS = None
 
 # google_credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 # if google_credentials_path and os.path.exists(google_credentials_path):
