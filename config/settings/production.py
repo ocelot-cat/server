@@ -3,7 +3,7 @@ from .base import { BASE_DIR,SECRET_KEY,INSTALLED_APPS,MIDDLEWARE,STATICFILES_ST
 import json
 from google.oauth2 import service_account
 
-DEBUG = False
+DEBUG = True
 ALLOWED_HOSTS = [
     "ocleot.up.railway.app",
 ]
