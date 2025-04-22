@@ -5,6 +5,8 @@ from .base import *
 from .base import BASE_DIR
 
 
+load_dotenv()
+
 DEBUG = True
 ALLOWED_HOSTS = [
     "ocleot.up.railway.app",
