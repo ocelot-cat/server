@@ -1,4 +1,3 @@
-# config/settings/base.py
 import os
 from pathlib import Path
 from decouple import config
@@ -7,7 +6,10 @@ from drf_yasg import openapi
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
+SECRET_KEY = config(
+    "DJANGO_SECRET_KEY",
+    default="django-insecure-1ini7kl%*nsg)d33hxb3pk&tjq92zw5%=ofqg@*gpfocno^v(s",
+)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -109,5 +111,7 @@ SWAGGER_SETTINGS = {
     "SPEC_VERSION": "2.0",
 }
 
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
-CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
+CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = config(
+    "CELERY_RESULT_BACKEND", default="redis://localhost:6379/0"
+)
