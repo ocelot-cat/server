@@ -1,11 +1,9 @@
 import os
 from .base import *
 from .base import BASE_DIR
-from decouple import config
 import json
 from google.oauth2 import service_account
 
-ROOT_URLCONF = "config.urls"
 DEBUG = False
 ALLOWED_HOSTS = [
     "ocleot.up.railway.app",
@@ -15,19 +13,19 @@ CSRF_TRUSTED_ORIGINS = [
     "https://ocleot.up.railway.app",
 ]
 
-ROOT_URLCONF = "config.urls"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("PGDATABASE"),
-        "USER": config("PGUSER"),
-        "PASSWORD": config("PGPASSWORD"),
-        "HOST": config("PGHOST"),
-        "PORT": config("PGPORT"),
+        "NAME": os.getenv("PGDATABASE"),
+        "USER": os.getenv("PGUSER"),
+        "PASSWORD": os.getenv("PGPASSWORD"),
+        "HOST": os.getenv("PGHOST"),
+        "PORT": os.getenv("PGPORT"),
     }
 }
 
-# STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
 GS_BUCKET_NAME = "django-ocelot"
 GS_PROJECT_ID = "django-ocelot"
@@ -48,7 +46,7 @@ else:
     GS_CREDENTIALS = None
 
 
-CLOUDFLARE_API_TOKEN = config("CLOUDFLARE_API_TOKEN")
-CLOUDFLARE_ACCOUNT_ID = config("CLOUDFLARE_ACCOUNT_ID")
-CLOUDFLARE_IMAGES_URL = config("CLOUDFLARE_IMAGES_URL")
-CLOUDFLARE_ACCOUNT_HASH = config("CLOUDFLARE_ACCOUNT_HASH")
+CLOUDFLARE_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN")
+CLOUDFLARE_ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID")
+CLOUDFLARE_IMAGES_URL = os.getenv("CLOUDFLARE_IMAGES_URL")
+CLOUDFLARE_ACCOUNT_HASH = os.getenv("CLOUDFLARE_ACCOUNT_HASH")
