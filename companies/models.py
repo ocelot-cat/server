@@ -5,6 +5,7 @@ from django.db import models
 from django.utils import timezone
 from datetime import timedelta
 from config.celery import app as celery_app
+from core.models import CommonModel
 from users.models import User
 
 
@@ -25,7 +26,7 @@ class Company(models.Model):
         return self.name
 
 
-class CompanyMembership(models.Model):
+class CompanyMembership(CommonModel):
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="company_membership"
@@ -59,8 +60,9 @@ class CompanyMembership(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=["role"]),
+            models.Index(fields=["created_at"]),
+            models.Index(fields=["company"]),
         ]
-        unique_together = ("company", "user")
 
     def __str__(self):
         return f"{self.user.username} - {self.company.name} ({self.get_role_display()})"
