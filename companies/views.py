@@ -1,9 +1,11 @@
 from django.db.models import Q
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView, UpdateAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from .permissions import (
     IsCompanyAdminOrOwner,
     IsCompanyOwner,
@@ -41,6 +43,7 @@ class CompanyDetailView(APIView):
     """
 
     permission_classes = [IsAuthenticated, IsCompanyOwner]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
 
     def get_object(self, pk):
         try:
@@ -84,6 +87,7 @@ class CompanyMembersListView(APIView):
     """
 
     permission_classes = [IsAuthenticated, IsCompanyAdminOrOwner]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
 
     def get(self, request, company_id):
         try:
@@ -92,7 +96,6 @@ class CompanyMembersListView(APIView):
             return Response(
                 {"error": "회사를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND
             )
-
         self.check_object_permissions(request, company)
 
         memberships = CompanyMembership.objects.filter(company=company).select_related(

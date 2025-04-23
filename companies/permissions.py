@@ -16,7 +16,5 @@ class IsCompanyOwner(BasePermission):
 
 class IsCompanyAdminOrOwner(BasePermission):
     def has_object_permission(self, request, view, obj):
-        membership = CompanyMembership.objects.filter(
-            company=obj, user=request.user
-        ).first()
+        membership = CompanyMembership.objects.get(company=obj, user=request.user)
         return membership and (membership.role == "owner" or membership.role == "admin")
