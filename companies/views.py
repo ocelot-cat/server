@@ -1,6 +1,8 @@
 from django.db.models import Q
 from rest_framework.authentication import SessionAuthentication
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.generics import ListAPIView, UpdateAPIView
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -15,6 +17,12 @@ from .serializers import CompanySerializer, DepartmentSerializer, NotificationSe
 from django.utils import timezone
 from datetime import timedelta
 import uuid
+
+
+class CompanyMembersListPagination(PageNumberPagination):
+    page_size = 50
+    page_size_query_param = "page_size"
+    max_page_size = 100
 
 
 class CompanyView(APIView):
@@ -80,37 +88,95 @@ class CompanyDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class CompanyMembersListView(APIView):
+class CompanyMembersListView(ListAPIView):
     """
-    기능 : 회사 멤버를 볼 수 있습니다.
-    허용 : 관리자와 오너
+    기능: 회사 멤버를 볼 수 있습니다. 부서로 필터링 가능.
+    허용: 관리자와 오너
+    쿼리 파라미터:
+        - sort: latest, oldest, name (기본: latest)
+        - department_id: 부서 ID로 필터링
+        - department_name: 부서 이름으로 필터링
+        - page: 페이지 번호 (페이지네이션)
     """
 
     permission_classes = [IsAuthenticated, IsCompanyAdminOrOwner]
     authentication_classes = [JWTAuthentication, SessionAuthentication]
+    pagination_class = CompanyMembersListPagination
 
-    def get(self, request, company_id):
+    def get_queryset(self):
+        company_id = self.kwargs["company_id"]
         try:
             company = Company.objects.get(id=company_id)
         except Company.DoesNotExist:
-            return Response(
-                {"error": "회사를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND
-            )
-        self.check_object_permissions(request, company)
+            raise NotFound({"error": "회사를 찾을 수 없습니다."})
 
-        memberships = CompanyMembership.objects.filter(company=company).select_related(
-            "user", "department"
-        )
+        self.check_object_permissions(self.request, company)
+
+        sort = self.request.query_params.get("sort", "latest")
+        department_id = self.request.query_params.get("department_id")
+        department_name = self.request.query_params.get("department_name")
+
+        memberships = CompanyMembership.objects.filter(company=company)
+
+        if department_id:
+            try:
+                memberships = memberships.filter(department__id=int(department_id))
+            except ValueError:
+                raise ValidationError({"error": "department_id는 숫자여야 합니다."})
+            if not memberships.exists():
+                raise NotFound(
+                    {"error": "해당 부서에 멤버가 없거나 부서가 존재하지 않습니다."}
+                )
+        elif department_name:
+            if department_name == "":
+                memberships = memberships.filter(department__isnull=True)
+            else:
+                memberships = memberships.filter(department__name=department_name)
+            if not memberships.exists():
+                raise NotFound(
+                    {"error": "해당 부서에 멤버가 없거나 부서가 존재하지 않습니다."}
+                )
+
+        if sort == "latest":
+            memberships = memberships.order_by("-created_at")
+        elif sort == "oldest":
+            memberships = memberships.order_by("created_at")
+        elif sort == "name":
+            memberships = memberships.order_by("user__username")
+        else:
+            raise ValidationError(
+                {"error": "잘못된 정렬 기준입니다. (latest, oldest, name 중 선택)"}
+            )
+
+        return memberships.select_related("user", "department")
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            data = [
+                {
+                    "user": membership.user.username,
+                    "role": membership.get_role_display(),
+                    "department": (
+                        membership.department.name
+                        if membership.department
+                        else "미지정"
+                    ),
+                }
+                for membership in page
+            ]
+            return self.get_paginated_response(data)
 
         data = [
             {
                 "user": membership.user.username,
-                "role": membership.role,
+                "role": membership.get_role_display(),
                 "department": (
                     membership.department.name if membership.department else "미지정"
                 ),
             }
-            for membership in memberships
+            for membership in queryset
         ]
 
         return Response(data)

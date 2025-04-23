@@ -11,7 +11,7 @@ class CompanySerializer(serializers.ModelSerializer):
 class CompanyMembershipSerializer(serializers.ModelSerializer):
     company_id = serializers.IntegerField(source="company.id")
     company_name = serializers.CharField(source="company.name")
-    role = serializers.CharField(source="get_role_display")  # 한글 역할 표시
+    role = serializers.CharField(source="get_role_display")
 
     class Meta:
         model = CompanyMembership
