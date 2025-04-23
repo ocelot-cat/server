@@ -27,7 +27,9 @@ class Company(models.Model):
 
 class CompanyMembership(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="company_membership"
+    )
     role = models.CharField(
         max_length=10,
         choices=(

@@ -1,11 +1,21 @@
 from rest_framework import serializers
-from .models import Company, Department, Notification
+from .models import Company, CompanyMembership, Department, Notification
 
 
 class CompanySerializer(serializers.ModelSerializer):
     class Meta:
         model = Company
         fields = ["id", "name", "owner"]
+
+
+class CompanyMembershipSerializer(serializers.ModelSerializer):
+    company_id = serializers.IntegerField(source="company.id")
+    company_name = serializers.CharField(source="company.name")
+    role = serializers.CharField(source="get_role_display")  # 한글 역할 표시
+
+    class Meta:
+        model = CompanyMembership
+        fields = ["company_id", "company_name", "role"]
 
 
 class DepartmentSerializer(serializers.ModelSerializer):
