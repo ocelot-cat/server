@@ -1,107 +1,95 @@
 from django.db.models import Q
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import NotFound, ValidationError
-from rest_framework.generics import ListAPIView, UpdateAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from .permissions import (
-    IsCompanyAdminOrOwner,
-    IsCompanyOwner,
-)
+from rest_framework.generics import ListAPIView, RetrieveAPIView
+from .permissions import IsCompanyAdminOrOwner, IsCompanyOwner, IsCompanyMember
 from .models import Company, CompanyMembership, Department, Invitation, Notification
-from .serializers import CompanySerializer, DepartmentSerializer, NotificationSerializer
+from .serializers import (
+    CompanySerializer,
+    DepartmentSerializer,
+    NotificationSerializer,
+    CompanyMembershipSerializer,
+)
 from django.utils import timezone
 from datetime import timedelta
 import uuid
+from rest_framework import serializers
 
 
 class CompanyMembersListPagination(PageNumberPagination):
-    page_size = 50
+    page_size = 20
     page_size_query_param = "page_size"
     max_page_size = 100
 
 
-class CompanyView(APIView):
+class CompanyViewSet(ModelViewSet):
     """
-    기능 : 회사를 만들 수 있습니다.
-    허용 : 누구나
+    기능: 회사 생성, 조회, 수정, 삭제
+    허용: 인증된 사용자 (수정/삭제는 오너만)
     """
 
+    queryset = Company.objects.all()
+    serializer_class = CompanySerializer
     permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        serializer = CompanySerializer(data=request.data)
-        if serializer.is_valid():
-            company = serializer.save(owner=request.user)
-            CompanyMembership.objects.create(
-                company=company, user=request.user, role="owner"
-            )
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class CompanyDetailView(APIView):
-    """
-    기능 : 회사의 상세 정보를 조회/수정/삭제합니다.
-    허용 : 회사 오너만
-    """
-
-    permission_classes = [IsAuthenticated, IsCompanyOwner]
     authentication_classes = [JWTAuthentication, SessionAuthentication]
 
-    def get_object(self, pk):
-        try:
-            obj = Company.objects.get(pk=pk)
-            self.check_object_permissions(self.request, obj)
-            return obj
-        except Company.DoesNotExist:
-            return None
+    def get_queryset(self):
+        return Company.objects.select_related("owner").prefetch_related("members")
 
-    def get(self, request, pk):
-        company = self.get_object(pk)
-        if not company:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        serializer = CompanySerializer(company)
+    def perform_create(self, serializer):
+        company = serializer.save(owner=self.request.user)
+        CompanyMembership.objects.create(
+            company=company, user=self.request.user, role="owner"
+        )
+
+    def get_permissions(self):
+        if self.action in ["update", "partial_update", "destroy"]:
+            return [IsAuthenticated(), IsCompanyOwner()]
+        return [IsAuthenticated()]
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.check_object_permissions(request, instance)
+        serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
-    def put(self, request, pk):
-        company = self.get_object(pk)
-        if not company:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.check_object_permissions(request, instance)
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
 
-        serializer = CompanySerializer(company, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, pk):
-        company = self.get_object(pk)
-        if not company:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
-        company.delete()
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.check_object_permissions(request, instance)
+        self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CompanyMembersListView(ListAPIView):
     """
-    기능: 회사 멤버를 볼 수 있습니다. 부서로 필터링 가능.
-    허용: 관리자와 오너
+    기능: 회사 멤버 목록 조회 (부서 필터링 가능)
+    허용: 관리자 및 오너
     쿼리 파라미터:
         - sort: latest, oldest, name (기본: latest)
         - department_id: 부서 ID로 필터링
         - department_name: 부서 이름으로 필터링
-        - page: 페이지 번호 (페이지네이션)
+        - page: 페이지 번호
     """
 
     permission_classes = [IsAuthenticated, IsCompanyAdminOrOwner]
     authentication_classes = [JWTAuthentication, SessionAuthentication]
     pagination_class = CompanyMembersListPagination
+    serializer_class = CompanyMembershipSerializer
 
     def get_queryset(self):
         company_id = self.kwargs["company_id"]
@@ -116,13 +104,15 @@ class CompanyMembersListView(ListAPIView):
         department_id = self.request.query_params.get("department_id")
         department_name = self.request.query_params.get("department_name")
 
-        memberships = CompanyMembership.objects.filter(company=company)
+        memberships = CompanyMembership.objects.filter(company=company).select_related(
+            "user", "department"
+        )
 
         if department_id:
             try:
                 memberships = memberships.filter(department__id=int(department_id))
             except ValueError:
-                raise ValidationError({"error": "department_id는 숫자여야 합니다."})
+                raise serializers.ValidationError({"department_id": "숫자여야 합니다."})
             if not memberships.exists():
                 raise NotFound(
                     {"error": "해당 부서에 멤버가 없거나 부서가 존재하지 않습니다."}
@@ -144,51 +134,52 @@ class CompanyMembersListView(ListAPIView):
         elif sort == "name":
             memberships = memberships.order_by("user__username")
         else:
-            raise ValidationError(
-                {"error": "잘못된 정렬 기준입니다. (latest, oldest, name 중 선택)"}
+            raise serializers.ValidationError(
+                {"sort": "잘못된 정렬 기준입니다. (latest, oldest, name 중 선택)"}
             )
 
-        return memberships.select_related("user", "department")
+        return memberships
 
-    def list(self, request, *args, **kwargs):
+
+class CompanyMemberDetailView(RetrieveAPIView):
+    """
+    기능: 특정 회사 멤버의 상세 정보 조회
+    허용: 관리자 및 오너
+    """
+
+    permission_classes = [IsAuthenticated, IsCompanyAdminOrOwner]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
+    serializer_class = CompanyMembershipSerializer
+
+    def get_queryset(self):
+        company_id = self.kwargs["company_id"]
+        try:
+            company = Company.objects.get(id=company_id)
+        except Company.DoesNotExist:
+            raise NotFound({"error": "회사를 찾을 수 없습니다."})
+
+        return CompanyMembership.objects.filter(company=company).select_related(
+            "user", "department"
+        )
+
+    def get_object(self):
         queryset = self.get_queryset()
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            data = [
-                {
-                    "user": membership.user.username,
-                    "role": membership.get_role_display(),
-                    "department": (
-                        membership.department.name
-                        if membership.department
-                        else "미지정"
-                    ),
-                }
-                for membership in page
-            ]
-            return self.get_paginated_response(data)
-
-        data = [
-            {
-                "user": membership.user.username,
-                "role": membership.get_role_display(),
-                "department": (
-                    membership.department.name if membership.department else "미지정"
-                ),
-            }
-            for membership in queryset
-        ]
-
-        return Response(data)
+        user_id = self.kwargs["user_id"]
+        try:
+            membership = queryset.get(user_id=user_id)
+        except CompanyMembership.DoesNotExist:
+            raise NotFound({"error": "사용자가 회사의 멤버가 아닙니다."})
+        return membership
 
 
 class CompanyPromoteMembersView(APIView):
     """
-    기능 : 회사 멤버를 승격시킬 수 있습니다.
-    허용 : 관리자와 오너
+    기능: 회사 멤버를 관리자로 승격
+    허용: 관리자 및 오너
     """
 
     permission_classes = [IsAuthenticated, IsCompanyAdminOrOwner]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
 
     def patch(self, request, company_id, user_id):
         try:
@@ -222,79 +213,67 @@ class CompanyPromoteMembersView(APIView):
         )
 
 
-class DepartmentView(APIView):
+class DepartmentViewSet(ModelViewSet):
     """
-    기능 : 부서를 만들 수 있습니다.
-    허용 : 회사 오너
+    기능: 부서 생성, 조회, 수정, 삭제
+    허용: 오너
     """
 
+    queryset = Department.objects.all()
+    serializer_class = DepartmentSerializer
     permission_classes = [IsAuthenticated, IsCompanyOwner]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
 
-    def post(self, request, company_id):
+    def get_queryset(self):
+        company_id = self.request.query_params.get("company_id") or self.kwargs.get(
+            "company_id"
+        )
+        if not company_id:
+            raise ValidationError({"company_id": "회사 ID가 필요합니다."})
+        return Department.objects.filter(company_id=company_id).select_related(
+            "company"
+        )
+
+    def perform_create(self, serializer):
+        company_id = self.request.data.get("company_id") or self.kwargs.get(
+            "company_id"
+        )
         try:
             company = Company.objects.get(id=company_id)
         except Company.DoesNotExist:
-            return Response(
-                {"error": "회사를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND
-            )
+            raise NotFound({"error": "회사를 찾을 수 없습니다."})
+        self.check_object_permissions(self.request, company)
+        serializer.save(company=company)
 
-        self.check_object_permissions(request, company)
-
-        serializer = DepartmentSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(company=company)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class DepartmentDetailView(APIView):
-    """
-    기능 : 부서의 상세 정보를 조회/수정/삭제합니다.
-    허용 : 회사 오너
-    """
-
-    permission_classes = [IsAuthenticated, IsCompanyOwner]
-
-    def get_object(self, pk):
-        try:
-            obj = Department.objects.get(pk=pk)
-            self.check_object_permissions(self.request, obj.company)
-            return obj
-        except Department.DoesNotExist:
-            return None
-
-    def get(self, request, pk):
-        department = self.get_object(pk)
-        if not department:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        serializer = DepartmentSerializer(department)
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.check_object_permissions(request, instance.company)
+        serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
-    def put(self, request, pk):
-        department = self.get_object(pk)
-        if not department:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        serializer = DepartmentSerializer(department, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.check_object_permissions(request, instance.company)
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
 
-    def delete(self, request, pk):
-        department = self.get_object(pk)
-        if not department:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        department.delete()
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.check_object_permissions(request, instance.company)
+        self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class InvitationCreateView(APIView):
     """
-    기능 : 초대 링크를 생성할 수 있습니다.
-    허용 : 회사 오너
+    기능: 초대 링크 생성
+    허용: 오너
     """
 
     permission_classes = [IsAuthenticated, IsCompanyOwner]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
 
     def post(self, request, company_id):
         try:
@@ -321,18 +300,22 @@ class InvitationCreateView(APIView):
             expiration_date=expiration_date,
         )
 
-        # 이메일 발송 로직
-
         return Response({"message": "초대가 생성되었습니다.", "token": token})
 
 
 class InvitationAcceptView(APIView):
     """
-    기능 : 초대받은 링크를 수락할 수 있습니다.
-    허용 : 누구나
+    기능: 초대 링크 수락
+    허용: 누구나
     """
 
-    def get(self, request, token):
+    def post(self, request):
+        token = request.data.get("token")
+        if not token:
+            return Response(
+                {"error": "토큰이 필요합니다."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
             invitation = Invitation.objects.get(
                 token=token,
@@ -347,7 +330,10 @@ class InvitationAcceptView(APIView):
 
         user = request.user if request.user.is_authenticated else None
         if not user:
-            return Response({"redirect": "/signup/?invitation_token=" + token})
+            return Response(
+                {"error": "인증이 필요합니다. 회원가입 후 초대를 수락해주세요."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
 
         CompanyMembership.objects.create(company=invitation.company, user=user)
 
@@ -358,30 +344,43 @@ class InvitationAcceptView(APIView):
         return Response({"message": "초대가 수락되었습니다."})
 
 
-class NotificationListView(ListAPIView):
-    serializer_class = NotificationSerializer
-    permission_classes = [IsAuthenticated, IsCompanyAdminOrOwner]
+class NotificationListView(APIView):
+    """
+    기능: 사용자 알림 목록 조회
+    허용: 인증된 사용자
+    """
 
-    def get_queryset(self):
-        # 현재 유저가 수신자인 모든 알림 반환
-        return (
-            Notification.objects.filter(recipient=self.request.user)
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
+
+    def get(self, request):
+        notifications = (
+            Notification.objects.filter(recipient=request.user)
             .select_related("company", "recipient")
             .order_by("-created_at")
         )
+        serializer = NotificationSerializer(notifications, many=True)
+        return Response(serializer.data)
 
 
-class NotificationMarkReadView(UpdateAPIView):
-    serializer_class = NotificationSerializer
+class NotificationMarkReadView(APIView):
+    """
+    기능: 알림을 읽음으로 표시
+    허용: 인증된 사용자
+    """
+
     permission_classes = [IsAuthenticated]
-    lookup_field = "id"
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
 
-    def get_queryset(self):
-        return Notification.objects.filter(recipient=self.request.user)
+    def patch(self, request, id):
+        try:
+            notification = Notification.objects.get(id=id, recipient=request.user)
+        except Notification.DoesNotExist:
+            return Response(
+                {"error": "알림을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND
+            )
 
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.is_read = True
-        instance.save(update_fields=["is_read"])
-        serializer = self.get_serializer(instance)
+        notification.is_read = True
+        notification.save(update_fields=["is_read"])
+        serializer = NotificationSerializer(notification)
         return Response(serializer.data, status=status.HTTP_200_OK)

@@ -1,6 +1,6 @@
 from .base import *
 from .base import BASE_DIR
-
+from decouple import config
 
 DEBUG = True
 ALLOWED_HOSTS = ["*"]
@@ -17,3 +17,9 @@ DATABASES = {
         "NAME": BASE_DIR / "db.sqlite3",
     }
 }
+
+
+CLOUDFLARE_API_TOKEN = config("CLOUDFLARE_API_TOKEN")
+CLOUDFLARE_ACCOUNT_ID = config("CLOUDFLARE_ACCOUNT_ID")
+CLOUDFLARE_IMAGES_URL = config("CLOUDFLARE_IMAGES_URL")
+CLOUDFLARE_ACCOUNT_HASH = config("CLOUDFLARE_ACCOUNT_HASH")

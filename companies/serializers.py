@@ -12,10 +12,25 @@ class CompanyMembershipSerializer(serializers.ModelSerializer):
     company_id = serializers.IntegerField(source="company.id")
     company_name = serializers.CharField(source="company.name")
     role = serializers.CharField(source="get_role_display")
+    username = serializers.CharField(source="user.username")
+    email = serializers.EmailField(source="user.email")
+    department = serializers.SerializerMethodField()
+    user_id = serializers.IntegerField(source="user.id")
 
     class Meta:
         model = CompanyMembership
-        fields = ["company_id", "company_name", "role"]
+        fields = [
+            "user_id",
+            "company_id",
+            "company_name",
+            "role",
+            "username",
+            "email",
+            "department",
+        ]
+
+    def get_department(self, obj):
+        return obj.department.name if obj.department else "미지정"
 
 
 class DepartmentSerializer(serializers.ModelSerializer):

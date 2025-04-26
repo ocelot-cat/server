@@ -1,5 +1,6 @@
+from rest_framework.metadata import PermissionDenied
 from rest_framework.permissions import BasePermission
-from companies.models import CompanyMembership
+from companies.models import Company, CompanyMembership
 
 
 class IsCompanyMember(BasePermission):
@@ -16,7 +17,14 @@ class IsCompanyOwner(BasePermission):
 
 class IsCompanyAdminOrOwner(BasePermission):
     def has_object_permission(self, request, view, obj):
+        if isinstance(obj, Company):
+            company = obj
+        elif isinstance(obj, CompanyMembership):
+            company = obj.company
+        else:
+            raise PermissionDenied("유효하지 않은 객체입니다.")
+
         membership = CompanyMembership.objects.filter(
-            company=obj, user=request.user
+            company=company, user=request.user
         ).first()
         return membership and (membership.role == "owner" or membership.role == "admin")

@@ -1,55 +1,56 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from .views import (
+    CompanyMemberDetailView,
+    CompanyViewSet,
     CompanyMembersListView,
     CompanyPromoteMembersView,
-    DepartmentDetailView,
-    DepartmentView,
+    DepartmentViewSet,
     InvitationCreateView,
     InvitationAcceptView,
-    CompanyView,
-    CompanyDetailView,
     NotificationListView,
     NotificationMarkReadView,
 )
 
+router = DefaultRouter()
+router.register(r"", CompanyViewSet, basename="company")
+router.register(r"departments", DepartmentViewSet, basename="department")
 
 urlpatterns = [
-    path("", CompanyView.as_view(), name="company"),
-    path("<int:pk>/", CompanyDetailView.as_view(), name="company_detail"),
-    path("notifications/", NotificationListView.as_view(), name="notification_list"),
-    path(
-        "notifications/<int:id>/mark-read/",
-        NotificationMarkReadView.as_view(),
-        name="notification_mark_read",
-    ),
+    path("", include(router.urls)),
     path(
         "<int:company_id>/members/",
         CompanyMembersListView.as_view(),
         name="company_members_list",
     ),
     path(
-        "<int:company_id>/members/<int:user_id>/promote/",
+        "<int:company_id>/members/<int:user_id>/",
+        CompanyMemberDetailView.as_view(),
+        name="company_member_detail",
+    ),
+    path(
+        "<int:company_id>/members/<int:user_id>/role/",
         CompanyPromoteMembersView.as_view(),
-        name="company_members_promote",
+        name="company_members_role",
     ),
     path(
-        "<int:company_id>/departments/",
-        DepartmentView.as_view(),
-        name="create_department",
-    ),
-    path(
-        "departments/<int:pk>/",
-        DepartmentDetailView.as_view(),
-        name="department_detail",
-    ),
-    path(
-        "<int:company_id>/invite/",
+        "<int:company_id>/invitations/",
         InvitationCreateView.as_view(),
         name="create_invitation",
     ),
     path(
-        "<str:token>/accept/",
+        "invitations/accept/",
         InvitationAcceptView.as_view(),
         name="accept_invitation",
+    ),
+    path(
+        "notifications/",
+        NotificationListView.as_view(),
+        name="notification_list",
+    ),
+    path(
+        "notifications/<int:id>/mark-read/",
+        NotificationMarkReadView.as_view(),
+        name="notification_mark_read",
     ),
 ]
