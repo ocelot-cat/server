@@ -44,7 +44,7 @@ urlpatterns = [
         name="accept_invitation",
     ),
     path(
-        "notifications/",
+        "<int:company_id>/notifications/",
         NotificationListView.as_view(),
         name="notification_list",
     ),

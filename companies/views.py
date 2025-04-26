@@ -32,7 +32,9 @@ class CompanyMembersListPagination(PageNumberPagination):
 class CompanyViewSet(ModelViewSet):
     """
     기능: 회사 생성, 조회, 수정, 삭제
-    허용: 인증된 사용자 (수정/삭제는 오너만)
+    허용:
+        - 생성: 인증된 사용자
+        - 조회, 수정, 삭제: 관리자 및 오너
     """
 
     queryset = Company.objects.all()
@@ -41,7 +43,13 @@ class CompanyViewSet(ModelViewSet):
     authentication_classes = [JWTAuthentication, SessionAuthentication]
 
     def get_queryset(self):
-        return Company.objects.select_related("owner").prefetch_related("members")
+        queryset = Company.objects.select_related("owner").prefetch_related("members")
+        if self.action == "list":
+            memberships = CompanyMembership.objects.filter(
+                user=self.request.user, role__in=["admin", "owner"]
+            ).values_list("company__id", flat=True)
+            queryset = queryset.filter(id__in=memberships)
+        return queryset
 
     def perform_create(self, serializer):
         company = serializer.save(owner=self.request.user)
@@ -50,9 +58,9 @@ class CompanyViewSet(ModelViewSet):
         )
 
     def get_permissions(self):
-        if self.action in ["update", "partial_update", "destroy"]:
-            return [IsAuthenticated(), IsCompanyOwner()]
-        return [IsAuthenticated()]
+        if self.action == "create":
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), IsCompanyAdminOrOwner()]
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -346,16 +354,25 @@ class InvitationAcceptView(APIView):
 
 class NotificationListView(APIView):
     """
-    기능: 사용자 알림 목록 조회
-    허용: 인증된 사용자
+    기능: 특정 회사에 속한 모든 알림 목록 조회
+    허용: 관리자 및 오너
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyAdminOrOwner]
     authentication_classes = [JWTAuthentication, SessionAuthentication]
 
-    def get(self, request):
+    def get(self, request, company_id):
+        try:
+            company = Company.objects.get(id=company_id)
+        except Company.DoesNotExist:
+            return Response(
+                {"error": "회사를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        self.check_object_permissions(request, company)
+
         notifications = (
-            Notification.objects.filter(recipient=request.user)
+            Notification.objects.filter(company=company)
             .select_related("company", "recipient")
             .order_by("-created_at")
         )
