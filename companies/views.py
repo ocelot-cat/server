@@ -1,6 +1,7 @@
 from django.db.models import Q
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.metadata import PermissionDenied
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
@@ -352,32 +353,22 @@ class InvitationAcceptView(APIView):
         return Response({"message": "초대가 수락되었습니다."})
 
 
-class NotificationListView(APIView):
-    """
-    기능: 특정 회사에 속한 모든 알림 목록 조회
-    허용: 관리자 및 오너
-    """
-
-    permission_classes = [IsAuthenticated, IsCompanyAdminOrOwner]
+class NotificationListView(ListAPIView):
+    serializer_class = NotificationSerializer
+    permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication, SessionAuthentication]
+    pagination_class = CompanyMembersListPagination
 
-    def get(self, request, company_id):
-        try:
-            company = Company.objects.get(id=company_id)
-        except Company.DoesNotExist:
-            return Response(
-                {"error": "회사를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND
-            )
-
-        self.check_object_permissions(request, company)
-
-        notifications = (
-            Notification.objects.filter(company=company)
-            .select_related("company", "recipient")
-            .order_by("-created_at")
+    def get_queryset(self):
+        memberships = CompanyMembership.objects.filter(
+            user=self.request.user, role__in=["admin", "owner"]
         )
-        serializer = NotificationSerializer(notifications, many=True)
-        return Response(serializer.data)
+        if not memberships.exists():
+            raise PermissionDenied("관리자 또는 오너인 회사가 없습니다.")
+        company_ids = memberships.values_list("company__id", flat=True)
+        return Notification.objects.filter(
+            recipient=self.request.user, company__id__in=company_ids
+        ).select_related("company", "recipient")
 
 
 class NotificationMarkReadView(APIView):
