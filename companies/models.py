@@ -102,7 +102,15 @@ class Invitation(models.Model):
 
 
 # 알림모델
+
+
 class Notification(models.Model):
+    # 알림 카테고리 선택지
+    CATEGORY_CHOICES = (
+        ("member_created", "멤버 생성"),
+        ("product_created", "제품 생성"),
+    )
+
     recipient = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="notifications"
     )
@@ -110,7 +118,8 @@ class Notification(models.Model):
         Company, on_delete=models.CASCADE, related_name="notifications"
     )
     message = models.CharField(max_length=255)
-    target_url = models.URLField(max_length=500, blank=True, null=True)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    object_id = models.PositiveIntegerField()
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -118,6 +127,7 @@ class Notification(models.Model):
         indexes = [
             models.Index(fields=["recipient", "is_read"]),
             models.Index(fields=["created_at"]),
+            models.Index(fields=["category"]),
         ]
         ordering = ["-created_at"]
 

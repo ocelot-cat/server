@@ -42,4 +42,4 @@ class DepartmentSerializer(serializers.ModelSerializer):
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = ["id", "message", "target_url", "is_read", "created_at"]
+        fields = ["id", "message", "category", "object_id", "is_read", "created_at"]

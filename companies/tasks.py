@@ -14,13 +14,14 @@ def create_notification_for_new_member(company_id, membership_id):
     message = (
         f"새로운 직원 {membership.user.username}님이 {company.name}에 가입했습니다."
     )
-    target_url = f"/api/v1/companies/{company.id}/members/{membership.user.id}/"
+
     for membership in admins_and_owners:
         Notification.objects.create(
             recipient=membership.user,
             company=company,
             message=message,
-            target_url=target_url,
+            category="member_created",
+            object_id=membership.id,
         )
 
 
@@ -33,12 +34,12 @@ def create_notification_for_new_product(company_id, product_id):
     ).select_related("user")
 
     message = f"새로운 물건 {product.name}이(가) {company.name}에 등록되었습니다."
-    target_url = product.get_absolute_url()
 
     for membership in admins_and_owners:
         Notification.objects.create(
             recipient=membership.user,
             company=company,
             message=message,
-            target_url=target_url,
+            category="product_created",
+            object_id=product.id,
         )

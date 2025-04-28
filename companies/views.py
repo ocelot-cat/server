@@ -374,15 +374,24 @@ class NotificationListView(ListAPIView):
 class NotificationMarkReadView(APIView):
     """
     기능: 알림을 읽음으로 표시
-    허용: 인증된 사용자
+    허용: 해당 회사에 속한 관리자 및 오너
     """
 
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication, SessionAuthentication]
 
     def patch(self, request, id):
+        memberships = CompanyMembership.objects.filter(
+            user=self.request.user, role__in=["admin", "owner"]
+        )
+        if not memberships.exists():
+            raise PermissionDenied("관리자 또는 오너인 회사가 없습니다.")
+        company_ids = memberships.values_list("company__id", flat=True)
+
         try:
-            notification = Notification.objects.get(id=id, recipient=request.user)
+            notification = Notification.objects.select_related("company").get(
+                id=id, recipient=request.user, company__id__in=company_ids
+            )
         except Notification.DoesNotExist:
             return Response(
                 {"error": "알림을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND
