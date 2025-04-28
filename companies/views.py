@@ -19,7 +19,7 @@ from .serializers import (
     CompanyMembershipSerializer,
 )
 from django.utils import timezone
-from datetime import timedelta
+from datetime import datetime, timedelta
 import uuid
 from rest_framework import serializers
 
@@ -354,21 +354,88 @@ class InvitationAcceptView(APIView):
 
 
 class NotificationListView(ListAPIView):
+    """
+    기능: 특정 회사에 속한 로그인된 사용자의 알림 목록 조회
+    허용: 관리자 및 오너
+    쿼리 파라미터:
+        - is_read: new (읽지 않은 알림)
+        - date: today, yesterday, last_7_days, older
+        - is_read와 date는 조합 가능
+    """
+
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication, SessionAuthentication]
     pagination_class = CompanyMembersListPagination
 
     def get_queryset(self):
+        company_id = self.kwargs["company_id"]
         memberships = CompanyMembership.objects.filter(
             user=self.request.user, role__in=["admin", "owner"]
         )
         if not memberships.exists():
             raise PermissionDenied("관리자 또는 오너인 회사가 없습니다.")
+
         company_ids = memberships.values_list("company__id", flat=True)
-        return Notification.objects.filter(
-            recipient=self.request.user, company__id__in=company_ids
+        if company_id not in company_ids:
+            raise PermissionDenied("해당 회사에 대한 관리자 또는 오너 권한이 없습니다.")
+
+        queryset = Notification.objects.filter(
+            recipient=self.request.user, company_id=company_id
         ).select_related("company", "recipient")
+
+        is_read = self.request.query_params.get("is_read")
+        date_filter = self.request.query_params.get("date")
+
+        if date_filter:
+            today = timezone.localtime(timezone.now()).date()
+            today_start = timezone.make_aware(
+                datetime.combine(today, datetime.min.time())
+            )
+            today_end = timezone.make_aware(
+                datetime.combine(today, datetime.max.time())
+            )
+            yesterday_start = timezone.make_aware(
+                datetime.combine(today - timedelta(days=1), datetime.min.time())
+            )
+            yesterday_end = timezone.make_aware(
+                datetime.combine(today - timedelta(days=1), datetime.max.time())
+            )
+            seven_days_ago = timezone.make_aware(
+                datetime.combine(today - timedelta(days=7), datetime.min.time())
+            )
+
+            if date_filter == "today":
+                queryset = queryset.filter(created_at__range=(today_start, today_end))
+
+            elif date_filter == "yesterday":
+                queryset = queryset.filter(
+                    created_at__range=(yesterday_start, yesterday_end)
+                )
+
+            elif date_filter == "last_7_days":
+
+                start_time = seven_days_ago
+                end_time = yesterday_start
+                queryset = queryset.filter(created_at__range=(start_time, end_time))
+
+            elif date_filter == "older":
+
+                end_time = seven_days_ago
+                queryset = queryset.filter(created_at__lt=end_time)
+
+            else:
+                raise ValidationError(
+                    {"date": "유효한 값은 today, yesterday, last_7_days, older입니다."}
+                )
+
+        if is_read:
+            if is_read == "new":
+                queryset = queryset.filter(is_read=False)
+            else:
+                raise ValidationError({"is_read": "유효한 값은 new입니다."})
+
+        return queryset
 
 
 class NotificationMarkReadView(APIView):
