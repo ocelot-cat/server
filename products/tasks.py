@@ -1,9 +1,14 @@
 from celery import shared_task
-from products.models import Product, ProductImage
+from django.db import transaction
+from django.db.models import F, Q, Sum
+from django.db.models.functions import Coalesce
+from companies.models import Company
+from products.models import Product, ProductImage, ProductRecord, ProductRecordSnapshot
 from products.services import upload_image_to_cloudflare
 import os
 import logging
 from django.utils import timezone
+from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
@@ -78,3 +83,39 @@ def upload_image_to_cloudflare_task(
                 logger.error(
                     f"Failed to delete temporary file {temp_file_path}: {str(e)}"
                 )
+
+
+@shared_task
+def create_daily_product_snapshots():
+    snapshot_date = timezone.now().date()
+    with transaction.atomic():
+        for company in Company.objects.all():
+            stock_data = (
+                ProductRecord.objects.filter(product__company=company)
+                .values("product")
+                .annotate(
+                    total_pieces=Sum(
+                        (F("box_quantity") * Coalesce(F("product__pieces_per_box"), 1))
+                        + F("piece_quantity")
+                        - F("consumed_quantity"),
+                        filter=Q(record_type="in"),
+                    )
+                )
+            )
+
+            for data in stock_data:
+                product = Product.objects.get(id=data["product"])
+                total_pieces = data["total_pieces"] or 0
+                box_quantity = total_pieces // product.pieces_per_box
+                piece_quantity = total_pieces % product.pieces_per_box
+                ProductRecordSnapshot.objects.update_or_create(
+                    company=company,
+                    product=product,
+                    snapshot_date=snapshot_date,
+                    defaults={
+                        "box_quantity": box_quantity,
+                        "piece_quantity": piece_quantity,
+                        "total_pieces": total_pieces,
+                    },
+                )
+            cache.delete_pattern(f"product_flow:company:{company.id}:*")

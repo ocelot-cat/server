@@ -10,6 +10,7 @@ from .views import (
     InvitationAcceptView,
     NotificationListView,
     NotificationMarkReadView,
+    WeeklyProductFlowView,
 )
 
 router = DefaultRouter()
@@ -52,5 +53,10 @@ urlpatterns = [
         "notifications/<int:id>/mark-read/",
         NotificationMarkReadView.as_view(),
         name="notification_mark_read",
+    ),
+    path(
+        "<int:company_id>/product-flow/",
+        WeeklyProductFlowView.as_view(),
+        name="weekly_product_flow",
     ),
 ]

@@ -1,4 +1,6 @@
-from django.db.models import Q
+from django.core.cache import cache
+from django.db.models import F, Q, Sum
+from django.db.models.functions import Coalesce, TruncDate
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.metadata import PermissionDenied
@@ -10,6 +12,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.generics import ListAPIView, RetrieveAPIView
+from products.models import Product, ProductRecord, ProductRecordSnapshot
 from .permissions import IsCompanyAdminOrOwner, IsCompanyOwner, IsCompanyMember
 from .models import Company, CompanyMembership, Department, Invitation, Notification
 from .serializers import (
@@ -468,3 +471,101 @@ class NotificationMarkReadView(APIView):
         notification.save(update_fields=["is_read"])
         serializer = NotificationSerializer(notification)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class WeeklyProductFlowView(APIView):
+    permission_classes = [IsAuthenticated, IsCompanyMember]
+
+    def get(self, request, company_id):
+        cache_key = f"product_flow:company:{company_id}:week:{timezone.now().date().isoformat()}"
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(cached_data, status=status.HTTP_200_OK)
+
+        try:
+            company = Company.objects.get(id=company_id)
+            today = timezone.now().date()
+            start_of_week = today - timedelta(days=today.weekday())
+            end_of_week = start_of_week + timedelta(days=6)
+
+            records = (
+                ProductRecord.objects.filter(
+                    product__company=company,
+                    record_date__date__gte=start_of_week,
+                    record_date__date__lte=end_of_week,
+                )
+                .select_related("product")
+                .annotate(record_date_trunc=TruncDate("record_date"))
+                .values("record_date_trunc", "record_type")
+                .annotate(
+                    total_pieces=Sum(
+                        (F("box_quantity") * Coalesce(F("product__pieces_per_box"), 1))
+                        + F("piece_quantity")
+                    )
+                )
+            )
+
+            flow_data = {
+                start_of_week + timedelta(days=i): {"in": 0, "out": 0} for i in range(7)
+            }
+            for record in records:
+                date = record["record_date_trunc"]
+                total_pieces = record["total_pieces"] or 0
+                record_type = record["record_type"]
+                if date not in flow_data:
+                    continue
+                flow_data[date][record_type] = total_pieces
+
+            total_stock = (
+                ProductRecordSnapshot.objects.filter(
+                    company=company, snapshot_date__lte=today
+                )
+                .order_by("-snapshot_date")
+                .values("snapshot_date")
+                .annotate(total_pieces=Sum("total_pieces"))
+                .first()
+            )
+            total_stock = (
+                total_stock["total_pieces"]
+                if total_stock
+                else (
+                    ProductRecord.objects.filter(product__company=company).aggregate(
+                        total_pieces=Sum(
+                            (
+                                F("box_quantity")
+                                * Coalesce(F("product__pieces_per_box"), 1)
+                            )
+                            + F("piece_quantity")
+                            - F("consumed_quantity"),
+                            filter=Q(record_type="in"),
+                        )
+                    )["total_pieces"]
+                    or 0
+                )
+            )
+
+            response_data = {
+                "company_id": company_id,
+                "week_start": start_of_week.isoformat(),
+                "week_end": end_of_week.isoformat(),
+                "total_stock": total_stock,
+                "flow_data": [
+                    {
+                        "date": date.isoformat(),
+                        "in": data["in"],
+                        "out": data["out"],
+                    }
+                    for date, data in flow_data.items()
+                ],
+            }
+
+            cache.set(cache_key, response_data, timeout=3600)
+            return Response(response_data, status=status.HTTP_200_OK)
+        except Company.DoesNotExist:
+            return Response(
+                {"error": "회사를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

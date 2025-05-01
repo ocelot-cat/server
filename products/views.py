@@ -149,7 +149,6 @@ class ProductRecordListView(ListCreateAPIView):
         if start_date:
             queryset = queryset.filter(record_date__gte=start_date)
         if end_date:
-            # 종료일 포함 (하루 끝까지)
             end_date = end_date.replace(
                 hour=23, minute=59, second=59, microsecond=999999
             )
