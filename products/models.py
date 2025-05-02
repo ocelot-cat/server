@@ -73,7 +73,13 @@ class Product(CommonModel):
                     self.company_id, self.id
                 )
             )
-        cache.delete_pattern(f"product_flow:company:{self.company_id}:*")
+        if cache.__class__.__module__.startswith("django_redis"):
+            try:
+                cache.delete_pattern(f"product_flow:company:{self.company_id}:*")
+            except Exception as e:
+                pass
+        else:
+            pass
 
     class Meta:
         indexes = [
@@ -142,7 +148,15 @@ class ProductRecord(models.Model):
             super().save(*args, **kwargs)
             if is_new and self.record_type == "out":
                 self._consume_stock()
-        cache.delete_pattern(f"product_flow:company:{self.product.company_id}:*")
+        if cache.__class__.__module__.startswith("django_redis"):
+            try:
+                cache.delete_pattern(
+                    f"product_flow:company:{self.product.company_id}:*"
+                )
+            except Exception as e:
+                pass
+        else:
+            pass
 
     def _consume_stock(self):
         """출고 시 FIFO로 재고 소진 (벌크 업데이트로 최적화)"""
@@ -220,7 +234,13 @@ class ProductRecordSnapshot(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        cache.delete_pattern(f"product_flow:company:{self.company_id}:*")
+        if cache.__class__.__module__.startswith("django_redis"):
+            try:
+                cache.delete_pattern(f"product_flow:company:{self.company_id}:*")
+            except Exception as e:
+                pass
+        else:
+            pass
 
     class Meta:
         indexes = [

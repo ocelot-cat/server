@@ -475,6 +475,7 @@ class NotificationMarkReadView(APIView):
 
 class WeeklyProductFlowView(APIView):
     permission_classes = [IsAuthenticated, IsCompanyMember]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
 
     def get(self, request, company_id):
         cache_key = f"product_flow:company:{company_id}:week:{timezone.now().date().isoformat()}"
@@ -559,7 +560,7 @@ class WeeklyProductFlowView(APIView):
                 ],
             }
 
-            cache.set(cache_key, response_data, timeout=3600)
+            cache.set(cache_key, response_data, timeout=1000)  # 캐싱 시간 설정
             return Response(response_data, status=status.HTTP_200_OK)
         except Company.DoesNotExist:
             return Response(
