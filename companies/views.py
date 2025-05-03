@@ -1,6 +1,20 @@
 from django.core.cache import cache
-from django.db.models import F, Q, Sum
+from django.db.models import (
+    F,
+    Q,
+    Case,
+    Count,
+    ExpressionWrapper,
+    FloatField,
+    OuterRef,
+    Subquery,
+    Sum,
+    Value,
+    When,
+)
 from django.db.models.functions import Coalesce, TruncDate
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.metadata import PermissionDenied
@@ -563,6 +577,148 @@ class WeeklyProductFlowView(APIView):
 
             cache.set(cache_key, response_data, timeout=3600)
             return Response(response_data, status=status.HTTP_200_OK)
+        except Company.DoesNotExist:
+            return Response(
+                {"error": "회사를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class ProductListViewPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
+class ProductListView(APIView):
+    """
+    ?filter_type=
+
+    - all: 모든 제품 반환 (기본값).
+    - shortage: 현재 재고(current_stock)가 100개 미만인 제품.
+    - unpopular: 지난 30일 동안 출고 횟수(out_count)가 0인 제품.
+    - volatile: 변동률(variation)의 절대값이 10% 초과인 제품
+    - interested: 사용자가 관심 등록한 제품 (UserProductInterest 기반)
+    """
+
+    permission_classes = [IsAuthenticated, IsCompanyMember]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
+    pagination_class = ProductListViewPagination
+
+    @method_decorator(cache_page(60))
+    def get(self, request, company_id):
+        filter_type = request.query_params.get("filter_type", "all")
+        only_interested = filter_type == "interested"
+        page = request.query_params.get("page", "1")
+        cache_key = (
+            f"products:company:{company_id}:filter_type:{filter_type}:page:{page}"
+        )
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(cached_data, status=status.HTTP_200_OK)
+
+        try:
+            company = Company.objects.get(id=company_id)
+            today = timezone.now().date()
+            last_month = today - timedelta(days=30)
+
+            current_stock_subquery = (
+                ProductRecordSnapshot.objects.filter(
+                    product=OuterRef("pk"), snapshot_date__lte=today
+                )
+                .order_by("-snapshot_date")
+                .values("total_pieces")[:1]
+            )
+
+            last_month_stock_subquery = (
+                ProductRecordSnapshot.objects.filter(
+                    product=OuterRef("pk"), snapshot_date__lte=last_month
+                )
+                .order_by("-snapshot_date")
+                .values("total_pieces")[:1]
+            )
+
+            out_count_subquery = (
+                ProductRecord.objects.filter(
+                    product=OuterRef("pk"),
+                    record_type="out",
+                    record_date__gte=last_month,
+                )
+                .values("product")
+                .annotate(count=Count("id"))
+                .values("count")[:1]
+            )
+
+            products = Product.objects.filter(company=company)
+
+            # Apply filters
+            if only_interested:
+                products = products.filter(userproductinterest__user=request.user)
+            elif filter_type == "shortage":
+                products = products.annotate(
+                    current_stock=Coalesce(Subquery(current_stock_subquery), 0)
+                ).filter(current_stock__lt=100)
+            elif filter_type == "unpopular":
+                products = products.annotate(
+                    out_count=Coalesce(Subquery(out_count_subquery), 0)
+                ).filter(out_count=0)
+            elif filter_type == "volatile":
+                products = products.annotate(
+                    current_stock=Coalesce(Subquery(current_stock_subquery), 0),
+                    last_month_stock=Coalesce(Subquery(last_month_stock_subquery), 0),
+                    variation=Case(
+                        When(
+                            last_month_stock__gt=0,
+                            then=ExpressionWrapper(
+                                (F("current_stock") - F("last_month_stock"))
+                                * 100.0
+                                / F("last_month_stock"),
+                                output_field=FloatField(),
+                            ),
+                        ),
+                        default=Value(0, output_field=FloatField()),
+                        output_field=FloatField(),
+                    ),
+                ).filter(variation__abs__gt=10)
+
+            products = products.annotate(
+                current_stock=Coalesce(Subquery(current_stock_subquery), 0),
+                last_month_stock=Coalesce(Subquery(last_month_stock_subquery), 0),
+                out_count=Coalesce(Subquery(out_count_subquery), 0),
+                variation=Case(
+                    When(
+                        last_month_stock__gt=0,
+                        then=ExpressionWrapper(
+                            (F("current_stock") - F("last_month_stock"))
+                            * 100.0
+                            / F("last_month_stock"),
+                            output_field=FloatField(),
+                        ),
+                    ),
+                    default=Value(0, output_field=FloatField()),
+                    output_field=FloatField(),
+                ),
+            ).select_related("company")
+
+            paginator = self.pagination_class()
+            paginated_products = paginator.paginate_queryset(products, request)
+            response_data = [
+                {
+                    "id": product.id,
+                    "name": product.name,
+                    "unit": product.unit,
+                    "stock": product.current_stock,
+                    "variation": round(product.variation, 2),
+                    "out_count": product.out_count,
+                }
+                for product in paginated_products
+            ]
+
+            cache.set(cache_key, response_data, timeout=60)
+            return paginator.get_paginated_response(response_data)
         except Company.DoesNotExist:
             return Response(
                 {"error": "회사를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND

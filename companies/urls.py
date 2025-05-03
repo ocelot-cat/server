@@ -1,5 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+
 from .views import (
     CompanyMemberDetailView,
     CompanyViewSet,
@@ -10,6 +11,7 @@ from .views import (
     InvitationAcceptView,
     NotificationListView,
     NotificationMarkReadView,
+    ProductListView,
     WeeklyProductFlowView,
 )
 
@@ -54,6 +56,7 @@ urlpatterns = [
         NotificationMarkReadView.as_view(),
         name="notification_mark_read",
     ),
+    path("<int:company_id>/products/", ProductListView.as_view(), name="product_list"),
     path(
         "<int:company_id>/product-flow/",
         WeeklyProductFlowView.as_view(),

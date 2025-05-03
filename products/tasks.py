@@ -1,5 +1,4 @@
 from celery import shared_task
-from django.db import transaction
 from django.db.models import F, Q, Sum
 from django.db.models.functions import Coalesce
 from companies.models import Company
@@ -87,55 +86,45 @@ def upload_image_to_cloudflare_task(
 
 @shared_task
 def create_daily_product_snapshots():
+    companies = Company.objects.all()
     snapshot_date = timezone.now().date()
-    try:
-        with transaction.atomic():
-            for company in Company.objects.all():
-                stock_data = (
-                    ProductRecord.objects.filter(product__company=company)
-                    .values("product")
-                    .annotate(
-                        total_pieces=Sum(
-                            (
-                                F("box_quantity")
-                                * Coalesce(F("product__pieces_per_box"), 1)
-                            )
-                            + F("piece_quantity")
-                            - F("consumed_quantity"),
-                            filter=Q(record_type="in"),
-                        )
-                    )
+
+    for company in companies:
+        stock_data = (
+            ProductRecord.objects.filter(product__company=company)
+            .values("product")
+            .annotate(
+                total_pieces=Sum(
+                    (F("box_quantity") * Coalesce(F("product__pieces_per_box"), 1))
+                    + F("piece_quantity")
+                    - F("consumed_quantity"),
+                    filter=Q(record_type="in"),
                 )
-                for data in stock_data:
-                    try:
-                        product = Product.objects.get(id=data["product"])
-                        total_pieces = data["total_pieces"] or 0
-                        box_quantity = total_pieces // product.pieces_per_box
-                        piece_quantity = total_pieces % product.pieces_per_box
-                        logger.info(
-                            f"Creating snapshot for product {product.name}: total_pieces={total_pieces}"
-                        )
-                        snapshot, created = (
-                            ProductRecordSnapshot.objects.update_or_create(
-                                company=company,
-                                product=product,
-                                snapshot_date=snapshot_date,
-                                defaults={
-                                    "box_quantity": box_quantity,
-                                    "piece_quantity": piece_quantity,
-                                    "total_pieces": total_pieces,
-                                },
-                            )
-                        )
-                    except Exception as e:
-                        logger.error(
-                            f"Failed to create snapshot for product {data['product']}: {str(e)}"
-                        )
-                try:
-                    cache.delete_pattern(f"product_flow:company:{company.id}:*")
-                except Exception as e:
-                    logger.error(
-                        f"Failed to delete cache for company {company.id}: {str(e)}"
-                    )
-    except Exception as e:
-        logger.error(f"Failed to run create_daily_product_snapshots: {str(e)}")
+            )
+        )
+
+        for data in stock_data:
+            product = Product.objects.get(id=data["product"])
+            total_pieces = data["total_pieces"] or 0
+            box_quantity = (
+                total_pieces // product.pieces_per_box if product.pieces_per_box else 0
+            )
+            piece_quantity = (
+                total_pieces % product.pieces_per_box
+                if product.pieces_per_box
+                else total_pieces
+            )
+
+            ProductRecordSnapshot.objects.update_or_create(
+                company=company,
+                product=product,
+                snapshot_date=snapshot_date,
+                defaults={
+                    "box_quantity": box_quantity,
+                    "piece_quantity": piece_quantity,
+                    "total_pieces": total_pieces,
+                },
+            )
+
+        cache.delete_pattern(f"products:company:{company.id}:*")
+        cache.delete_pattern(f"product_flow:company:{company.id}:*")
