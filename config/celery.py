@@ -1,5 +1,6 @@
 import os
 from celery import Celery
+from celery.schedules import crontab
 
 # from celery.schedules import crontab
 
@@ -11,18 +12,19 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 
 app.autodiscover_tasks()
 
-app.conf.beat_schedule = {
-    "create-daily-product-snapshots": {
-        "task": "products.tasks.create_daily_product_snapshots",
-        "schedule": 60.0,
-        "options": {"timezone": "Asia/Seoul"},
-    },
-}
-
+# test
 # app.conf.beat_schedule = {
 #     "create-daily-product-snapshots": {
 #         "task": "products.tasks.create_daily_product_snapshots",
-#         "schedule": crontab(hour=0, minute=0),
+#         "schedule": 30.0,
 #         "options": {"timezone": "Asia/Seoul"},
 #     },
 # }
+
+app.conf.beat_schedule = {
+    "create-daily-product-snapshots": {
+        "task": "products.tasks.create_daily_product_snapshots",
+        "schedule": crontab(hour=0, minute=0),
+        "options": {"timezone": "Asia/Seoul"},
+    },
+}

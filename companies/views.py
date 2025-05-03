@@ -481,6 +481,7 @@ class WeeklyProductFlowView(APIView):
         cache_key = f"product_flow:company:{company_id}:week:{timezone.now().date().isoformat()}"
         cached_data = cache.get(cache_key)
         if cached_data:
+            print(cached_data)
             return Response(cached_data, status=status.HTTP_200_OK)
 
         try:
@@ -560,7 +561,7 @@ class WeeklyProductFlowView(APIView):
                 ],
             }
 
-            cache.set(cache_key, response_data, timeout=1000)  # 캐싱 시간 설정
+            cache.set(cache_key, response_data, timeout=3600)
             return Response(response_data, status=status.HTTP_200_OK)
         except Company.DoesNotExist:
             return Response(
