@@ -6,6 +6,7 @@ from django.db.models import (
     Count,
     ExpressionWrapper,
     FloatField,
+    IntegerField,
     OuterRef,
     Subquery,
     Sum,
@@ -635,7 +636,8 @@ class ProductListView(APIView):
 
             last_month_stock_subquery = (
                 ProductRecordSnapshot.objects.filter(
-                    product=OuterRef("pk"), snapshot_date__lte=last_month
+                    product=OuterRef("pk"),
+                    snapshot_date__lte=last_month,
                 )
                 .order_by("-snapshot_date")
                 .values("total_pieces")[:1]
@@ -654,36 +656,6 @@ class ProductListView(APIView):
 
             products = Product.objects.filter(company=company)
 
-            # Apply filters
-            if only_interested:
-                products = products.filter(userproductinterest__user=request.user)
-            elif filter_type == "shortage":
-                products = products.annotate(
-                    current_stock=Coalesce(Subquery(current_stock_subquery), 0)
-                ).filter(current_stock__lt=100)
-            elif filter_type == "unpopular":
-                products = products.annotate(
-                    out_count=Coalesce(Subquery(out_count_subquery), 0)
-                ).filter(out_count=0)
-            elif filter_type == "volatile":
-                products = products.annotate(
-                    current_stock=Coalesce(Subquery(current_stock_subquery), 0),
-                    last_month_stock=Coalesce(Subquery(last_month_stock_subquery), 0),
-                    variation=Case(
-                        When(
-                            last_month_stock__gt=0,
-                            then=ExpressionWrapper(
-                                (F("current_stock") - F("last_month_stock"))
-                                * 100.0
-                                / F("last_month_stock"),
-                                output_field=FloatField(),
-                            ),
-                        ),
-                        default=Value(0, output_field=FloatField()),
-                        output_field=FloatField(),
-                    ),
-                ).filter(variation__abs__gt=10)
-
             products = products.annotate(
                 current_stock=Coalesce(Subquery(current_stock_subquery), 0),
                 last_month_stock=Coalesce(Subquery(last_month_stock_subquery), 0),
@@ -701,8 +673,30 @@ class ProductListView(APIView):
                     default=Value(0, output_field=FloatField()),
                     output_field=FloatField(),
                 ),
-            ).select_related("company")
+                is_volatile=Case(
+                    When(
+                        Q(variation__gt=10) | Q(variation__lt=-10),
+                        then=Value(1),
+                    ),
+                    default=Value(0),
+                    output_field=IntegerField(),
+                ),
+            )
 
+            if only_interested:
+                products = products.filter(userproductinterest__user=request.user)
+            elif filter_type == "shortage":
+                products = products.filter(current_stock__lt=100)
+            elif filter_type == "unpopular":
+                products = products.filter(out_count=0)
+            elif filter_type == "volatile":
+                products = products.filter(is_volatile=1)
+            elif filter_type != "all":
+                raise ValidationError({"filter_type": "유효하지 않은 필터 타입입니다."})
+
+            products = products.select_related("company")
+
+            # Pagination
             paginator = self.pagination_class()
             paginated_products = paginator.paginate_queryset(products, request)
             response_data = [
