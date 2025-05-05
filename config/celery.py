@@ -11,7 +11,6 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 
 app.autodiscover_tasks()
 
-# test
 app.conf.beat_schedule = {
     "create-daily-product-snapshots": {
         "task": "products.tasks.create_daily_product_snapshots",
@@ -24,6 +23,11 @@ app.conf.beat_schedule = {
 #     "create-daily-product-snapshots": {
 #         "task": "products.tasks.create_daily_product_snapshots",
 #         "schedule": crontab(hour=0, minute=0),
+#         "options": {"timezone": "Asia/Seoul"},
+#     },
+#     "delete-old-product-snapshots": {
+#         "task": "products.tasks.delete_old_product_snapshots",
+#         "schedule": crontab(hour=1, minute=0),
 #         "options": {"timezone": "Asia/Seoul"},
 #     },
 # }

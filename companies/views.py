@@ -626,23 +626,6 @@ class ProductListView(APIView):
             today = timezone.now().date()
             last_month = today - timedelta(days=30)
 
-            current_stock_subquery = (
-                ProductRecordSnapshot.objects.filter(
-                    product=OuterRef("pk"), snapshot_date__lte=today
-                )
-                .order_by("-snapshot_date")
-                .values("total_pieces")[:1]
-            )
-
-            last_month_stock_subquery = (
-                ProductRecordSnapshot.objects.filter(
-                    product=OuterRef("pk"),
-                    snapshot_date__lte=last_month,
-                )
-                .order_by("-snapshot_date")
-                .values("total_pieces")[:1]
-            )
-
             out_count_subquery = (
                 ProductRecord.objects.filter(
                     product=OuterRef("pk"),
@@ -654,31 +637,14 @@ class ProductListView(APIView):
                 .values("count")[:1]
             )
 
-            products = Product.objects.filter(company=company)
-
-            products = products.annotate(
-                current_stock=Coalesce(Subquery(current_stock_subquery), 0),
-                last_month_stock=Coalesce(Subquery(last_month_stock_subquery), 0),
+            products = Product.objects.filter(company=company).annotate(
                 out_count=Coalesce(Subquery(out_count_subquery), 0),
-                variation=Case(
-                    When(
-                        last_month_stock__gt=0,
-                        then=ExpressionWrapper(
-                            (F("current_stock") - F("last_month_stock"))
-                            * 100.0
-                            / F("last_month_stock"),
-                            output_field=FloatField(),
-                        ),
-                    ),
-                    default=Value(0, output_field=FloatField()),
-                    output_field=FloatField(),
-                ),
                 is_volatile=Case(
                     When(
                         Q(variation__gt=10) | Q(variation__lt=-10),
-                        then=Value(1),
+                        then=Value(1, output_field=IntegerField()),
                     ),
-                    default=Value(0),
+                    default=Value(0, output_field=IntegerField()),
                     output_field=IntegerField(),
                 ),
             )

@@ -1,4 +1,3 @@
-# products/models.py
 from django.db import models, transaction
 from django.db.models import Sum, F
 from django.core.validators import MinValueValidator
@@ -59,6 +58,13 @@ class Product(CommonModel):
         default="pending",
         help_text="Image upload status",
     )
+    current_stock = models.IntegerField(default=0, help_text="현재 재고 (total_pieces)")
+    avg_last_30_days_stock = models.FloatField(
+        default=0.0, help_text="지난 30일 평균 재고 (total_pieces)"
+    )
+    variation = models.FloatField(
+        default=0.0, help_text="지난 30일 평균 대비 변동률 (%)"
+    )
 
     def save(self, *args, **kwargs):
         is_new = self._state.adding
@@ -76,10 +82,9 @@ class Product(CommonModel):
         if cache.__class__.__module__.startswith("django_redis"):
             try:
                 cache.delete_pattern(f"product_flow:company:{self.company_id}:*")
+                cache.delete_pattern(f"products:company:{self.company_id}:*")
             except Exception as e:
                 pass
-        else:
-            pass
 
     class Meta:
         indexes = [
@@ -153,10 +158,9 @@ class ProductRecord(models.Model):
                 cache.delete_pattern(
                     f"product_flow:company:{self.product.company_id}:*"
                 )
+                cache.delete_pattern(f"products:company:{self.product.company_id}:*")
             except Exception as e:
                 pass
-        else:
-            pass
 
     def _consume_stock(self):
         """출고 시 FIFO로 재고 소진 (벌크 업데이트로 최적화)"""
@@ -237,16 +241,16 @@ class ProductRecordSnapshot(models.Model):
         if cache.__class__.__module__.startswith("django_redis"):
             try:
                 cache.delete_pattern(f"product_flow:company:{self.company_id}:*")
+                cache.delete_pattern(f"products:company:{self.company_id}:*")
             except Exception as e:
                 pass
-        else:
-            pass
 
     class Meta:
         indexes = [
             models.Index(fields=["company", "snapshot_date"]),
             models.Index(fields=["product", "snapshot_date"]),
             models.Index(fields=["company", "-snapshot_date"]),
+            models.Index(fields=["product", "-snapshot_date"]),
         ]
         unique_together = ["company", "product", "snapshot_date"]
         ordering = ["-snapshot_date"]

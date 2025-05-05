@@ -1,5 +1,6 @@
+from datetime import timedelta
 from celery import shared_task
-from django.db.models import F, Q, Sum
+from django.db.models import F, Q, Avg, Sum
 from django.db.models.functions import Coalesce
 from companies.models import Company
 from products.models import Product, ProductImage, ProductRecord, ProductRecordSnapshot
@@ -88,6 +89,8 @@ def upload_image_to_cloudflare_task(
 def create_daily_product_snapshots():
     companies = Company.objects.all()
     snapshot_date = timezone.now().date()
+    last_month = snapshot_date - timedelta(days=30)
+    thirty_days_ago = last_month - timedelta(days=30)
 
     for company in companies:
         stock_data = (
@@ -126,5 +129,58 @@ def create_daily_product_snapshots():
                 },
             )
 
+            avg_stock_data = ProductRecordSnapshot.objects.filter(
+                product=product,
+                snapshot_date__lte=last_month,
+                snapshot_date__gte=thirty_days_ago,
+            ).aggregate(avg_total_pieces=Avg("total_pieces"))
+            avg_last_30_days_stock = avg_stock_data["avg_total_pieces"] or 0.0
+
+            product.current_stock = total_pieces
+            product.avg_last_30_days_stock = avg_last_30_days_stock
+            product.variation = (
+                (
+                    (total_pieces - avg_last_30_days_stock)
+                    / avg_last_30_days_stock
+                    * 100.0
+                )
+                if avg_last_30_days_stock > 0
+                else 0.0
+            )
+            product.save()
+
+            cache.set(
+                f"product:{product.id}:current_stock",
+                total_pieces,
+                timeout=86400,
+            )
+            cache.set(
+                f"product:{product.id}:avg_last_30_days_stock",
+                avg_last_30_days_stock,
+                timeout=86400,
+            )
+            cache.set(
+                f"product:{product.id}:variation",
+                product.variation,
+                timeout=86400,
+            )
+
+        cache.delete_pattern(f"products:company:{company.id}:*")
+        cache.delete_pattern(f"product_flow:company:{company.id}:*")
+
+
+@shared_task
+def delete_old_product_snapshots():
+    """6개월(180일) 이상된 ProductRecordSnapshot 레코드 삭제"""
+    cutoff_date = timezone.now().date() - timedelta(days=180)
+    deleted_count, _ = ProductRecordSnapshot.objects.filter(
+        snapshot_date__lt=cutoff_date
+    ).delete()
+    logger.info(
+        f"Deleted {deleted_count} ProductRecordSnapshot records older than {cutoff_date}"
+    )
+
+    companies = Company.objects.all()
+    for company in companies:
         cache.delete_pattern(f"products:company:{company.id}:*")
         cache.delete_pattern(f"product_flow:company:{company.id}:*")

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Company, Department, Invitation, CompanyMembership
+from .models import Company, Department, Invitation, CompanyMembership, Notification
 
 
 @admin.register(Company)
@@ -52,3 +52,27 @@ class InvitationAdmin(admin.ModelAdmin):
         if obj:
             return self.readonly_fields + ("company", "email")
         return self.readonly_fields
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ("recipient", "company", "message", "is_read", "created_at")
+    list_filter = ("is_read", "company")
+    search_fields = ("recipient__username", "message", "company__name")
+    raw_id_fields = ("recipient", "company")
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if not request.user.is_superuser:
+            return qs.filter(
+                company__in=request.user.companies.filter(
+                    companymembership__role__in=["admin", "owner"]
+                )
+            )
+        return qs
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

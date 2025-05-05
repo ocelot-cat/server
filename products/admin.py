@@ -1,6 +1,9 @@
 from django import forms
 from django.contrib import admin
+from django.db.models import Avg
 from django.forms import ModelForm
+from django.utils import timezone
+from django.utils.timezone import timedelta
 from products.services import upload_image_to_cloudflare
 from .models import Product, ProductImage, ProductRecord, ProductRecordSnapshot
 from django.core.cache import cache
@@ -152,6 +155,7 @@ class ProductRecordSnapshotAdmin(admin.ModelAdmin):
         "piece_quantity",
         "total_pieces",
         "created_at",
+        "avg_last_30_days",
     )
     list_filter = ("snapshot_date", "company")
     search_fields = ("product__name", "company__name")
@@ -159,34 +163,14 @@ class ProductRecordSnapshotAdmin(admin.ModelAdmin):
     date_hierarchy = "snapshot_date"
     raw_id_fields = ("company", "product")
 
-    def get_queryset(self, request):
-        qs = super().get_queryset(request).select_related("company", "product")
-        if not request.user.is_superuser:
-            return qs.filter(
-                company__in=request.user.companies.filter(
-                    companymembership__role__in=["admin", "owner"]
-                )
-            )
-        return qs
-
-    def has_add_permission(self, request):
-        # 관리자가 임의로 스냅샷을 추가할 수 있도록 허용
-        return (
-            request.user.is_superuser
-            or request.user.companies.filter(
-                companymembership__role__in=["admin", "owner"]
-            ).exists()
-        )
-
-    def has_change_permission(self, request, obj=None):
-        # 스냅샷은 기록의 정확성을 위해 수정 불가
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        # 관리자 또는 오너만 삭제 가능
-        return (
-            request.user.is_superuser
-            or request.user.companies.filter(
-                companymembership__role__in=["admin", "owner"]
-            ).exists()
-        )
+    def avg_last_30_days(self, obj):
+        last_month = timezone.now().date() - timedelta(days=30)
+        thirty_days_ago = last_month - timedelta(days=30)
+        avg_stock = (
+            ProductRecordSnapshot.objects.filter(
+                product=obj.product,
+                snapshot_date__lte=last_month,
+                snapshot_date__gte=thirty_days_ago,
+            ).aggregate(avg_total_pieces=Avg("total_pieces"))
+        )["avg_total_pieces"] or 0.0
+        return round(avg_stock, 2)
