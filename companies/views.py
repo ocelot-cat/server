@@ -1,3 +1,4 @@
+from dateutil.relativedelta import relativedelta
 from django.core.cache import cache
 from django.db.models import (
     F,
@@ -7,6 +8,7 @@ from django.db.models import (
     ExpressionWrapper,
     FloatField,
     IntegerField,
+    Max,
     OuterRef,
     Subquery,
     Sum,
@@ -597,12 +599,16 @@ class ProductListViewPagination(PageNumberPagination):
 class ProductListView(APIView):
     """
     ?filter_type=
-
     - all: 모든 제품 반환 (기본값).
     - shortage: 현재 재고(current_stock)가 100개 미만인 제품.
     - unpopular: 지난 30일 동안 출고 횟수(out_count)가 0인 제품.
     - volatile: 변동률(variation)의 절대값이 10% 초과인 제품
     - interested: 사용자가 관심 등록한 제품 (UserProductInterest 기반)
+
+    ?sort=
+    - latest: 생성일 내림차순 (최신순).
+    - oldest: 생성일 오름차순 (오래된순).
+    - name: 이름 오름차순 (이름순).
     """
 
     permission_classes = [IsAuthenticated, IsCompanyMember]
@@ -612,11 +618,10 @@ class ProductListView(APIView):
     @method_decorator(cache_page(60))
     def get(self, request, company_id):
         filter_type = request.query_params.get("filter_type", "all")
+        sort = request.query_params.get("sort", "latest")
         only_interested = filter_type == "interested"
         page = request.query_params.get("page", "1")
-        cache_key = (
-            f"products:company:{company_id}:filter_type:{filter_type}:page:{page}"
-        )
+        cache_key = f"products:company:{company_id}:filter_type:{filter_type}:sort:{sort}:page:{page}"
         cached_data = cache.get(cache_key)
         if cached_data:
             return Response(cached_data, status=status.HTTP_200_OK)
@@ -660,9 +665,17 @@ class ProductListView(APIView):
             elif filter_type != "all":
                 raise ValidationError({"filter_type": "유효하지 않은 필터 타입입니다."})
 
+            if sort == "latest":
+                products = products.order_by("-created_at")
+            elif sort == "oldest":
+                products = products.order_by("created_at")
+            elif sort == "name":
+                products = products.order_by("name")
+            else:
+                raise ValidationError({"sort": "유효하지 않은 정렬 타입입니다."})
+
             products = products.select_related("company")
 
-            # Pagination
             paginator = self.pagination_class()
             paginated_products = paginator.paginate_queryset(products, request)
             response_data = [
@@ -679,6 +692,109 @@ class ProductListView(APIView):
 
             cache.set(cache_key, response_data, timeout=60)
             return paginator.get_paginated_response(response_data)
+        except Company.DoesNotExist:
+            return Response(
+                {"error": "회사를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class CategoryCompositionView(APIView):
+    permission_classes = [IsAuthenticated, IsCompanyMember]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
+
+    def get(self, request, company_id):
+        year_month = request.query_params.get(
+            "year_month", timezone.now().strftime("%Y-%m")
+        )
+        try:
+            target_date = datetime.strptime(year_month, "%Y-%m")
+        except ValueError:
+            return Response(
+                {"error": "year_month는 YYYY-MM 형식이어야 합니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        cache_key = f"category_composition:company:{company_id}:month:{year_month}"
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(cached_data, status=status.HTTP_200_OK)
+
+        try:
+            company = Company.objects.get(id=company_id)
+            start_of_month = target_date.date()
+            end_of_month = (target_date + relativedelta(months=1)).date()
+            latest_snapshot = ProductRecordSnapshot.objects.filter(
+                company=company,
+                snapshot_date__gte=start_of_month,
+                snapshot_date__lt=end_of_month,
+            ).aggregate(latest_date=Max("snapshot_date"))
+
+            latest_date = latest_snapshot["latest_date"]
+            if not latest_date:
+                return Response(
+                    {
+                        "company_id": company_id,
+                        "year_month": year_month,
+                        "total_stock": 0,
+                        "composition": [],
+                    },
+                    status=status.HTTP_200_OK,
+                )
+
+            snapshots = (
+                ProductRecordSnapshot.objects.filter(
+                    company=company, snapshot_date=latest_date
+                )
+                .select_related("product")
+                .values("product__category")
+                .annotate(total_pieces=Sum("total_pieces"))
+            )
+
+            total_stock = sum(snapshot["total_pieces"] for snapshot in snapshots) or 0
+
+            category_names = {
+                "electronics": "전자제품",
+                "fashion": "의류",
+                "food": "식품",
+                "household": "생활용품/가구",
+                "chemicals": "화학/위험물",
+                "pharma": "의약품",
+                "raw_materials": "원자재",
+                "miscellaneous": "기타",
+            }
+
+            composition = []
+            for snapshot in snapshots:
+                category = snapshot["product__category"]
+                total_pieces = snapshot["total_pieces"] or 0
+                percentage = (
+                    (total_pieces / total_stock * 100.0) if total_stock > 0 else 0.0
+                )
+                composition.append(
+                    {
+                        "category": category,
+                        "name": category_names.get(category, category),
+                        "total_pieces": total_pieces,
+                        "percentage": round(percentage, 2),
+                    }
+                )
+
+            response_data = {
+                "company_id": company_id,
+                "year_month": year_month,
+                "total_stock": total_stock,
+                "composition": sorted(
+                    composition, key=lambda x: x["total_pieces"], reverse=True
+                ),
+            }
+
+            cache.set(cache_key, response_data, timeout=3600)
+            return Response(response_data, status=status.HTTP_200_OK)
+
         except Company.DoesNotExist:
             return Response(
                 {"error": "회사를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND

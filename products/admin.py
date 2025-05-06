@@ -62,7 +62,6 @@ class ProductRecordSnapshotForm(ModelForm):
         snapshot_date = cleaned_data.get("snapshot_date")
 
         if company and product and snapshot_date:
-            # 동일한 company, product, snapshot_date 조합이 이미 존재하는지 확인
             if ProductRecordSnapshot.objects.filter(
                 company=company, product=product, snapshot_date=snapshot_date
             ).exists():
@@ -70,7 +69,6 @@ class ProductRecordSnapshotForm(ModelForm):
                     "해당 회사, 제품, 날짜에 대한 스냅샷이 이미 존재합니다."
                 )
 
-            # 제품이 회사에 속해 있는지 확인
             if product.company != company:
                 raise forms.ValidationError(
                     "선택한 제품은 해당 회사에 속해 있지 않습니다."
@@ -82,7 +80,6 @@ class ProductRecordSnapshotForm(ModelForm):
         instance = super().save(commit=False)
         product = instance.product
 
-        # total_pieces 계산
         total_pieces = (
             instance.box_quantity * product.pieces_per_box + instance.piece_quantity
         )
@@ -90,7 +87,6 @@ class ProductRecordSnapshotForm(ModelForm):
 
         if commit:
             instance.save()
-            # 캐시 무효화
             if cache.__class__.__module__.startswith("django_redis"):
                 try:
                     cache.delete_pattern(f"products:company:{instance.company_id}:*")

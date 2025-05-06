@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
 from .views import (
+    CategoryCompositionView,
     CompanyMemberDetailView,
     CompanyViewSet,
     CompanyMembersListView,
@@ -61,5 +62,10 @@ urlpatterns = [
         "<int:company_id>/product-flow/",
         WeeklyProductFlowView.as_view(),
         name="weekly_product_flow",
+    ),
+    path(
+        "<int:company_id>/category-composition/",
+        CategoryCompositionView.as_view(),
+        name="category_composition",
     ),
 ]

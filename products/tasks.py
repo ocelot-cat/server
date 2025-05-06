@@ -167,6 +167,7 @@ def create_daily_product_snapshots():
 
         cache.delete_pattern(f"products:company:{company.id}:*")
         cache.delete_pattern(f"product_flow:company:{company.id}:*")
+        cache.delete_pattern(f"category_composition:company:{company.id}:*")
 
 
 @shared_task
