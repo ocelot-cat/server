@@ -168,3 +168,6 @@ django-ocelot-eeb50abc3638.json
 
 dump.rdb
 todo.ini
+
+celerybeat-schedule-shm
+celerybeat-schedule-wal

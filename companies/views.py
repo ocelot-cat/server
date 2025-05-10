@@ -597,7 +597,57 @@ class ProductListViewPagination(PageNumberPagination):
 
 
 class ProductListView(APIView):
+    permission_classes = [IsAuthenticated, IsCompanyMember]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
+    pagination_class = ProductListViewPagination
+
+    @method_decorator(cache_page(60))
+    def get(self, request, company_id):
+        page = request.query_params.get("page", "1")
+        search = request.query_params.get("search", "")
+        cache_key = (
+            f"products:company:{company_id}:simple_list:page:{page}:search:{search}"
+        )
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(cached_data, status=status.HTTP_200_OK)
+
+        try:
+            company = Company.objects.get(id=company_id)
+            products = Product.objects.filter(company=company).select_related("company")
+
+            if search:
+                products = products.filter(name__icontains=search)
+
+            products = products.order_by("-updated_at")
+
+            paginator = self.pagination_class()
+            paginated_products = paginator.paginate_queryset(products, request)
+            response_data = [
+                {
+                    "id": product.id,
+                    "name": product.name,
+                    "stock": product.current_stock,
+                    "updated_at": product.updated_at,
+                }
+                for product in paginated_products
+            ]
+
+            cache.set(cache_key, response_data, timeout=60)
+            return paginator.get_paginated_response(response_data)
+        except Company.DoesNotExist:
+            return Response(
+                {"error": "회사를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class AnalysisProductListView(APIView):
     """
+    분석 페이지 Product List
     ?filter_type=
     - all: 모든 제품 반환 (기본값).
     - shortage: 현재 재고(current_stock)가 100개 미만인 제품.
